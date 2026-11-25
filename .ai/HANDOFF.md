@@ -5,29 +5,38 @@ history lives in AI_ACTIVITY_LOG.md._
 
 **Agent:** Claude
 
-**Completed:** Drafted the LocalTube spec and the initial `.ai/` coordination
-files (website mode; not committed).
+**Completed:** Phase 1 MVP app scaffold committed to `main` — Gradle setup, Room
+data layer, SAF scanner, settings/PIN store, repository, Compose theme + nav, and
+all screens (Home, Channel, Media3 Player, Parent gate, Settings, Main folders,
+Screen time), plus the GitHub-Releases update checker and `release.yml`
+(self-hosted runner).
 
-**In progress:** Phase 0 coordination setup.
+**In progress:** First compile pass.
 
-**Branch/PR:** None yet.
+**Branch/PR:** Committed to `main`. `AGENTS.md` still in open PR #1.
 
-**Tests:** Not run (no code in repo).
+**Tests:** Not run. **Lint:** Not run. **Build:** Not run (no Android SDK in the
+authoring environment).
 
-**Blockers:**
-- Stack not yet approved by Rick (see DECISIONS.md and the spec's open decisions).
-- AGENTS.md not yet written (companion to these files; carries the protocol +
-  filled-in PROJECT DETAILS).
-- No GitHub Issues or labels created yet.
+**Blockers / things to verify first:**
+- **Compile the project in Android Studio.** Expect minor fixes: dependency
+  versions in `gradle/libs.versions.toml`, Media3 `@UnstableApi` opt-ins, and any
+  Compose API drift. This is the top priority before anything else.
+- **Commit the Gradle wrapper jar** (Android Studio generates it on first open),
+  then switch `release.yml` back to `./gradlew`.
+- **Set the signing secrets** (`ANDROID_KEYSTORE_BASE64`, `..._PASSWORD`,
+  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) before the release job can sign.
+- **Confirm the self-hosted runner labels** match `[self-hosted, linux, android]`.
+- AGENTS.md PR #1 still open; stack still marked proposed.
 
 **Next action:**
-1. Rick confirms the proposed stack and the spec's open decisions.
-2. Create the six `ai:` / `status:` labels.
-3. Open the Phase 0 setup PR: AGENTS.md (protocol + real Gradle commands) plus
-   these `.ai/` files, changing nothing else.
-4. Scaffold the Gradle project, then add `release.yml` + the updater skeleton.
-5. Only then start Phase 1 features.
+1. Open in Android Studio, sync, `./gradlew assembleDebug`, fix compile errors.
+2. Add the wrapper jar; run unit tests + lint.
+3. Set signing secrets; let the self-hosted runner cut the first release.
+4. Then iterate features (favourites, continue-watching, kiosk pinning, the
+   updater download step) as Issues.
 
-**Shared records updated:** Yes (these files, draft).
+**Shared records updated:** Yes (PROJECT_STATE, AI_ACTIVITY_LOG, DECISIONS, this
+file).
 
-**Remote synchronization:** Unavailable (website mode).
+**Remote synchronization:** Confirmed (committed to a fresh clone of main).

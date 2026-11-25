@@ -2,7 +2,7 @@
 
 **Repository:** rickevans86/LocalTube
 **Updated:** 2026-11-26
-**Phase:** 0 — Coordination & pipeline setup (pre-feature)
+**Phase:** 1 — MVP app scaffold on main (unverified build)
 
 ## What LocalTube is
 An offline, kid-safe Android video player that plays videos already stored on the
@@ -17,11 +17,18 @@ folder access · Hilt · Gradle (Kotlin DSL) + version catalog. minSdk 26,
 targetSdk 35.
 
 ## Current status
-- Full architecture + feature spec drafted (LocalTube spec doc).
-- No application code in the repo yet.
-- Coordination system (AGENTS.md + `.ai/` files) being established — this file
-  is part of that setup.
-- Release pipeline (`release.yml`) and built-in self-updater not yet created.
+- Phase 1 MVP scaffold committed to `main` (Kotlin/Compose). See `BUILDING.md`.
+- Implemented: SAF folder pick + scan, Room model, shuffled home feed, movies as
+  posters, show-folders as channels, Media3 player + up-next, parent PIN gate,
+  parent settings, main-folders mapping, screen-time limit + bedtime, GitHub-
+  Releases update checker.
+- `release.yml` present, targeting the **self-hosted runner**
+  `[self-hosted, linux, android]`; signs + publishes to GitHub Releases.
+- **Not yet compiled** — authored without an Android SDK. A first build pass is
+  needed (likely minor dep-version / Media3 opt-in fixes). Tests/lint: not run.
+- Gradle wrapper jar not committed yet (Android Studio generates it on open; CI
+  provisions Gradle directly meanwhile).
+- `AGENTS.md` is in open PR #1 (stack still marked proposed).
 
 ## Architecture (summary)
 MVVM with a repository layer, four layers top-down, each depending only on the

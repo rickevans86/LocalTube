@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">LocalTube</string>
+    <string name="search">Search</string>
+    <string name="parent_area">Parent area</string>
+    <string name="shuffle">Shuffle</string>
+    <string name="parents_only">Parents only</string>
+    <string name="enter_pin">Enter your PIN to continue</string>
+    <string name="cancel">Cancel</string>
+    <string name="done">Done</string>
+    <string name="main_folders">Main folders</string>
+    <string name="add_folder">Add folder</string>
+    <string name="screen_time">Screen time</string>
+    <string name="check_for_updates">Check for updates</string>
+    <string name="times_up">All done for today</string>
+    <string name="times_up_body">Ask a grown-up to unlock with the PIN.</string>
+</resources>

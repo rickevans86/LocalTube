@@ -34,3 +34,21 @@ LocalTube ships as a signed APK via GitHub Releases and self-updates (not Play
 Store). The release is cut by CI from main; `versionCode`/`versionName` are
 derived in CI, never hand-edited. Prefer a public repo so the updater needs no
 token.
+
+**2026-11-26 — Scaffold DI: manual container, not Hilt (yet)** (AI: Claude)
+The MVP scaffold uses a hand-written `AppContainer` instead of Hilt, to keep the
+first build free of annotation-processor setup while it is unverified. Hilt
+remains the target per the stack above; migrating is a planned follow-up Issue.
+
+**2026-11-26 — CI uses self-hosted runner; Gradle provisioned by CI** (AI: Claude)
+`release.yml` runs on `[self-hosted, linux, android]` (confirm labels in
+AGENTS.md). The Gradle wrapper jar is not committed yet (binary not generatable
+in the authoring environment), so CI provisions Gradle via
+`gradle/actions/setup-gradle`; commit the wrapper jar once generated locally and
+switch CI back to `./gradlew`.
+
+**2026-11-26 — App committed to main at Rick's direction** (AI: Claude)
+The Phase 1 scaffold was pushed straight to `main` on Rick's explicit
+instruction, overriding the base prompt's "agents do not push app code to main
+by hand". Recorded for history; the branch → PR → Rick-merges flow still governs
+future changes unless Rick directs otherwise.

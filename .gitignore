@@ -1,0 +1,17 @@
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+/build
+/captures
+.externalNativeBuild
+.cxx
+/app/build
+/build
+# Signing material must never be committed.
+*.jks
+*.keystore
+# Release artifacts.
+*.apk
+*.aab
