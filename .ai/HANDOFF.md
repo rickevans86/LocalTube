@@ -5,29 +5,31 @@ history lives in AI_ACTIVITY_LOG.md._
 
 **Agent:** Claude
 
-**Completed:** Drafted the LocalTube spec and the initial `.ai/` coordination
-files (website mode; not committed).
+**Completed:** `.ai/` coordination files on main; `AGENTS.md` drafted (protocol +
+Android conventions + Project details) and opened as a PR from
+`claude/setup-agents-md`.
 
-**In progress:** Phase 0 coordination setup.
+**In progress:** Phase 0 coordination setup — awaiting PR merge.
 
-**Branch/PR:** None yet.
+**Branch/PR:** `claude/setup-agents-md`.
 
 **Tests:** Not run (no code in repo).
 
 **Blockers:**
-- Stack not yet approved by Rick (see DECISIONS.md and the spec's open decisions).
-- AGENTS.md not yet written (companion to these files; carries the protocol +
-  filled-in PROJECT DETAILS).
+- Stack still marked proposed in `AGENTS.md` / `DECISIONS.md` — needs Rick's
+  explicit approval to ratify.
 - No GitHub Issues or labels created yet.
+- Gradle project not scaffolded; `release.yml` and the updater not created.
 
 **Next action:**
-1. Rick confirms the proposed stack and the spec's open decisions.
-2. Create the six `ai:` / `status:` labels.
-3. Open the Phase 0 setup PR: AGENTS.md (protocol + real Gradle commands) plus
-   these `.ai/` files, changing nothing else.
-4. Scaffold the Gradle project, then add `release.yml` + the updater skeleton.
-5. Only then start Phase 1 features.
+1. Review and merge the `AGENTS.md` PR.
+2. Confirm the proposed stack and the spec's open decisions.
+3. Create the six `ai:` / `status:` labels.
+4. Scaffold the Gradle project (app module, wrapper, `.gitignore`).
+5. Add `release.yml` (self-hosted runner) + the updater skeleton.
+6. Only then start Phase 1 features.
 
-**Shared records updated:** Yes (these files, draft).
+**Shared records updated:** Yes (`AI_ACTIVITY_LOG.md` appended, this file
+replaced).
 
-**Remote synchronization:** Unavailable (website mode).
+**Remote synchronization:** Confirmed (working from a fresh clone of main).
