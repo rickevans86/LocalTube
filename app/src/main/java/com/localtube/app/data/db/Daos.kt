@@ -63,6 +63,19 @@ interface VideoDao {
     @Query("SELECT * FROM videos WHERE folderId = :folderId AND hidden = 0 ORDER BY title")
     fun observeByFolder(folderId: Long): Flow<List<VideoEntity>>
 
+    @Query(
+        "SELECT v.* FROM videos v JOIN folders f ON v.folderId = f.id " +
+            "WHERE v.hidden = 0 AND f.visible = 1 AND v.title LIKE '%' || :query || '%' " +
+            "ORDER BY v.title LIMIT 100"
+    )
+    fun search(query: String): Flow<List<VideoEntity>>
+
+    @Query(
+        "SELECT v.* FROM videos v JOIN watch_events w ON v.documentUri = w.videoUri " +
+            "WHERE v.hidden = 0 GROUP BY v.documentUri ORDER BY MAX(w.startedAt) DESC LIMIT 50"
+    )
+    fun observeRecent(): Flow<List<VideoEntity>>
+
     @Query("UPDATE videos SET hidden = :hidden WHERE documentUri = :uri")
     suspend fun setHidden(uri: String, hidden: Boolean)
 }

@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 
 val Cream = Color(0xFFFFF7ED)
 val SettingsBg = Color(0xFFF4F1EA)
+val KidBg = Color(0xFFE3F3F6)
 val Coral = Color(0xFFFF6B6B)
 val Ink = Color(0xFF2B2B2B)
 val Blue = Color(0xFF4D96FF)
