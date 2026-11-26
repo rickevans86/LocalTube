@@ -24,10 +24,13 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      # The self-hosted runner has no Android SDK preinstalled; provision it and
-      # accept licenses so AGP can fetch platform 35 / build-tools as needed.
+      # Ensure ANDROID_HOME + cmdline-tools and accept licenses. packages: '' skips
+      # the obsolete 'tools' package (removed from the SDK); AGP fetches the
+      # platform 35 / build-tools it needs itself.
       - name: Set up Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       # The wrapper jar is not committed yet, so CI provisions Gradle directly.
       # Once the wrapper jar is committed, this can switch to ./gradlew.
