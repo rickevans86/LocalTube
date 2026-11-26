@@ -24,8 +24,9 @@ authoring environment).
   Compose API drift. This is the top priority before anything else.
 - **Commit the Gradle wrapper jar** (Android Studio generates it on first open),
   then switch `release.yml` back to `./gradlew`.
-- **Set the signing secrets** (`ANDROID_KEYSTORE_BASE64`, `..._PASSWORD`,
-  `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) before the release job can sign.
+- Signing secrets set (`RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`,
+  `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) — workflow + build.gradle use these
+  names. Keystore generated 2026-11-26.
 - **Confirm the self-hosted runner labels** match `[self-hosted, linux, android]`.
 - AGENTS.md PR #1 still open; stack still marked proposed.
 

@@ -27,14 +27,14 @@ android {
 
     // Release signing is provided by CI via environment variables. When they are
     // absent (local dev), assembleRelease falls back to the debug keystore.
-    val keystorePath = System.getenv("ANDROID_KEYSTORE_FILE")
+    val keystorePath = System.getenv("RELEASE_KEYSTORE_FILE")
     signingConfigs {
         if (keystorePath != null) {
             create("release") {
                 storeFile = file(keystorePath)
-                storePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")
-                keyAlias = System.getenv("ANDROID_KEY_ALIAS")
-                keyPassword = System.getenv("ANDROID_KEY_PASSWORD")
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
             }
         }
     }

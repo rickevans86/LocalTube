@@ -43,8 +43,8 @@ lint before relying on a build.
   `main` using the **self-hosted runner** (`[self-hosted, linux, android]`) and
   publishes it to GitHub Releases, tagged `v1.0.<run_number>`.
 - Required repo secrets (names only; set via `gh secret set <NAME> --repo rickevans86/LocalTube`):
-  `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`,
-  `ANDROID_KEY_PASSWORD`.
+  `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
+  `RELEASE_KEY_PASSWORD`.
 - The in-app updater (`update/UpdateChecker.kt`) reads the latest release and
   compares version codes; downloading + `PackageInstaller` handoff
   (`update/ApkInstaller.kt`) is wired but the download step is a follow-up.
