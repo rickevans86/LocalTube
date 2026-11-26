@@ -102,6 +102,9 @@ class SettingsViewModel(
     }
 
     suspend fun checkForUpdates(): UpdateResult = updateChecker.check()
+
+    /** Re-scans every folder and fills in artwork for anything new. */
+    suspend fun refreshFiles() = repo.refreshLibrary()
 }
 
 private fun settingsVm(container: AppContainer) = viewModelFactory {
@@ -122,6 +125,7 @@ fun SettingsScreen(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var update by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
+    var refreshState by remember { mutableStateOf("Add or remove shows & movies") }
 
     Column(
         modifier = Modifier
@@ -139,6 +143,13 @@ fun SettingsScreen(
         }
 
         SettingsRow("Main folders", "${folders.size} folders · become kid categories", onOpenFolders)
+        SettingsRow("Refresh files", refreshState) {
+            scope.launch {
+                refreshState = "Refreshing…"
+                refreshState = runCatching { vm.refreshFiles() }
+                    .fold({ "Up to date · tap to refresh again" }, { "Couldn't refresh — try again" })
+            }
+        }
         SettingsRow("Scan movies & TV shows", "Match posters · fix mismatches", onOpenScanMatch)
         SettingsRow("Screen time", "${settings.dailyLimitMinutes} min/day", onOpenScreenTime)
         SettingsRow("Check for updates", updateStatusText(update)) {

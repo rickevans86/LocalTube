@@ -1,5 +1,5 @@
 <resources>
-    <style name="Theme.LocalTube" parent="Theme.Material3.DayNight.NoActionBar">
+    <style name="Theme.LocalTube" parent="Theme.Material3.Light.NoActionBar">
         <item name="android:statusBarColor">@color/brand_cream</item>
         <item name="android:navigationBarColor">@color/brand_cream</item>
         <item name="android:windowLightStatusBar">true</item>

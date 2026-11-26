@@ -56,9 +56,24 @@ class ContentRepository(
         for (folder in folderDao.getAll()) rescanFolder(folder)
     }
 
+    /**
+     * Full refresh: re-walk every folder (adds new files, drops missing ones —
+     * no files on disk are touched) and fill in artwork for anything new.
+     */
+    suspend fun refreshLibrary() {
+        rescanAll()
+        matchAll(onlyMissing = true)
+    }
+
     suspend fun rescanFolder(folder: FolderEntity) {
         val videos = scanner.scan(folder)
-        videoDao.deleteByFolder(folder.id)
+        if (videos.isEmpty()) {
+            videoDao.deleteByFolder(folder.id)
+            return
+        }
+        // Drop only files that vanished, then upsert the rest — this avoids
+        // wiping the folder (which made the home screen flash on every refresh).
+        videoDao.deleteMissing(folder.id, videos.map { it.documentUri })
         videoDao.upsertAll(videos)
     }
 
@@ -69,18 +84,27 @@ class ContentRepository(
 
     suspend fun saveMeta(meta: MetaEntity) = metaDao.upsert(meta)
 
-    /** Auto-matches every movie and series to artwork; keeps manual fixes. */
-    suspend fun matchAll() {
+    /**
+     * Matches movies and series to artwork; always keeps manual fixes.
+     * When [onlyMissing] is true, items that already have artwork are skipped
+     * (used by the automatic refresh so it doesn't re-hit the network for
+     * everything); when false, every non-manual item is re-matched.
+     */
+    suspend fun matchAll(onlyMissing: Boolean = false) {
         for (movie in videoDao.getMovies()) {
             val key = movie.documentUri
-            if (metaDao.get(key)?.manual == true) continue
+            val existing = metaDao.get(key)
+            if (existing?.manual == true) continue
+            if (onlyMissing && existing != null) continue
             val query = NameParser.cleanTitle(movie.title)
             val hint = NameParser.imdbId(movie.title)
             ArtworkClient.match("movie", key, query, hint)?.let { metaDao.upsert(it) }
         }
         for (channel in videoDao.getChannelsOnce()) {
             val key = seriesKey(channel.folderId, channel.name)
-            if (metaDao.get(key)?.manual == true) continue
+            val existing = metaDao.get(key)
+            if (existing?.manual == true) continue
+            if (onlyMissing && existing != null) continue
             val query = NameParser.cleanTitle(channel.name)
             val hint = NameParser.imdbId(channel.name)
             ArtworkClient.match("series", key, query, hint)?.let { metaDao.upsert(it) }

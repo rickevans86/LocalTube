@@ -1,5 +1,7 @@
 package com.localtube.app.feature.home
 
+import android.app.Activity
+import android.provider.Settings
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -23,22 +25,33 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.BrightnessHigh
+import androidx.compose.material.icons.filled.BrightnessLow
+import androidx.compose.material.icons.filled.BrightnessMedium
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PlayCircle
 import androidx.compose.material.icons.filled.Tv
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -195,8 +208,49 @@ private fun TopBar(onOpenParentArea: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text("LocalTube", fontSize = 26.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
+        BrightnessButton()
         IconButton(onClick = onOpenParentArea) {
             Icon(Icons.Default.Lock, contentDescription = "Parent area")
+        }
+    }
+}
+
+/** Dims/brightens the screen for this app only (resets when you leave). */
+@Composable
+private fun BrightnessButton() {
+    val context = LocalContext.current
+    val activity = context as? Activity
+    var expanded by remember { mutableStateOf(false) }
+    var level by remember {
+        mutableFloatStateOf(
+            runCatching {
+                Settings.System.getInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS) / 255f
+            }.getOrDefault(0.7f).coerceIn(0.05f, 1f),
+        )
+    }
+    LaunchedEffect(level) {
+        activity?.window?.let { w ->
+            w.attributes = w.attributes.apply { screenBrightness = level }
+        }
+    }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(Icons.Default.BrightnessMedium, contentDescription = "Brightness")
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.width(260.dp).padding(horizontal = 14.dp),
+            ) {
+                Icon(Icons.Default.BrightnessLow, contentDescription = null, modifier = Modifier.size(18.dp))
+                Slider(
+                    value = level,
+                    onValueChange = { level = it },
+                    valueRange = 0.05f..1f,
+                    modifier = Modifier.weight(1f).padding(horizontal = 8.dp),
+                )
+                Icon(Icons.Default.BrightnessHigh, contentDescription = null, modifier = Modifier.size(18.dp))
+            }
         }
     }
 }

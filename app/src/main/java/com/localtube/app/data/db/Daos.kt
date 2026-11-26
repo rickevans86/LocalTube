@@ -33,6 +33,10 @@ interface VideoDao {
     @Query("DELETE FROM videos WHERE folderId = :folderId")
     suspend fun deleteByFolder(folderId: Long)
 
+    /** Removes rows for files that are no longer on disk (keeps the rest). */
+    @Query("DELETE FROM videos WHERE folderId = :folderId AND documentUri NOT IN (:keepUris)")
+    suspend fun deleteMissing(folderId: Long, keepUris: List<String>)
+
     /** Shuffled home feed across every visible folder. */
     @Query(
         "SELECT v.* FROM videos v JOIN folders f ON v.folderId = f.id " +

@@ -15,16 +15,22 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import kotlinx.coroutines.launch
 import com.localtube.app.di.AppContainer
 import com.localtube.app.feature.channel.ChannelScreen
 import com.localtube.app.feature.gate.ParentGateScreen
@@ -63,6 +69,21 @@ object Routes {
 @Composable
 fun LocalTubeRoot(container: AppContainer) {
     val nav = rememberNavController()
+
+    // Refresh the library every time the app is brought to the foreground, so
+    // files added to or removed from the folders show up without re-adding them.
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_START) {
+                scope.launch { runCatching { container.repository.refreshLibrary() } }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
     NavHost(navController = nav, startDestination = Routes.MAIN) {
         composable(Routes.MAIN) {
             MainScaffold(
