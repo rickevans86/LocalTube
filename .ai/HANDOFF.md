@@ -27,7 +27,8 @@ authoring environment).
 - Signing secrets set (`RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`,
   `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD`) — workflow + build.gradle use these
   names. Keystore generated 2026-11-26.
-- **Confirm the self-hosted runner labels** match `[self-hosted, linux, android]`.
+- Runner HV01 confirmed (labels `self-hosted, linux, github-actions-linux`);
+  workflow provisions the Android SDK via `android-actions/setup-android`.
 - AGENTS.md PR #1 still open; stack still marked proposed.
 
 **Next action:**

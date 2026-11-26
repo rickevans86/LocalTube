@@ -22,8 +22,9 @@ targetSdk 35.
   posters, show-folders as channels, Media3 player + up-next, parent PIN gate,
   parent settings, main-folders mapping, screen-time limit + bedtime, GitHub-
   Releases update checker.
-- `release.yml` present, targeting the **self-hosted runner**
-  `[self-hosted, linux, android]`; signs + publishes to GitHub Releases.
+- `release.yml` present, targeting **self-hosted runner HV01**
+  (`[self-hosted, linux, github-actions-linux]`), provisions the Android SDK,
+  signs with the RELEASE_* secrets, and publishes to GitHub Releases.
 - **Not yet compiled** — authored without an Android SDK. A first build pass is
   needed (likely minor dep-version / Media3 opt-in fixes). Tests/lint: not run.
 - Gradle wrapper jar not committed yet (Android Studio generates it on open; CI

@@ -40,8 +40,8 @@ lint before relying on a build.
 ## Release & self-update
 
 - `.github/workflows/release.yml` builds a **signed** release APK on every push to
-  `main` using the **self-hosted runner** (`[self-hosted, linux, android]`) and
-  publishes it to GitHub Releases, tagged `v1.0.<run_number>`.
+  `main` using the **self-hosted runner** HV01 (`[self-hosted, linux, github-actions-linux]`),
+  provisions the Android SDK, and publishes to GitHub Releases, tagged `v1.0.<run_number>`.
 - Required repo secrets (names only; set via `gh secret set <NAME> --repo rickevans86/LocalTube`):
   `RELEASE_KEYSTORE_BASE64`, `RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`,
   `RELEASE_KEY_PASSWORD`.

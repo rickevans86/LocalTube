@@ -10,10 +10,9 @@ permissions:
 
 jobs:
   build-release:
-    # Self-hosted runner. Confirm these labels match Rick's runner and keep them
-    # in sync with AGENTS.md. Fallback: swap to `ubuntu-latest` if the runner is
-    # offline.
-    runs-on: [self-hosted, linux, android]
+    # Self-hosted runner HV01 (labels: self-hosted, Linux, X64, github-actions-linux).
+    # Fallback: swap to `ubuntu-latest` if the runner is offline.
+    runs-on: [self-hosted, linux, github-actions-linux]
 
     steps:
       - name: Checkout
@@ -24,6 +23,11 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+
+      # The self-hosted runner has no Android SDK preinstalled; provision it and
+      # accept licenses so AGP can fetch platform 35 / build-tools as needed.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
 
       # The wrapper jar is not committed yet, so CI provisions Gradle directly.
       # Once the wrapper jar is committed, this can switch to ./gradlew.
