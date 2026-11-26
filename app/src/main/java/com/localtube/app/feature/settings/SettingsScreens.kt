@@ -6,6 +6,8 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -132,6 +134,7 @@ fun SettingsScreen(
             .fillMaxSize()
             .background(SettingsBg)
             .windowInsetsPadding(WindowInsets.systemBars)
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 24.dp),
     ) {
         Row(
@@ -327,6 +330,7 @@ fun ScreenTimeScreen(container: AppContainer, onBack: () -> Unit) {
             .fillMaxSize()
             .background(SettingsBg)
             .windowInsetsPadding(WindowInsets.systemBars)
+            .verticalScroll(rememberScrollState())
             .padding(24.dp),
     ) {
         Row(modifier = Modifier.padding(bottom = 22.dp), verticalAlignment = Alignment.CenterVertically) {
