@@ -23,6 +23,9 @@ class ContentRepository(
     fun channelEpisodes(folderId: Long, channel: String): Flow<List<VideoEntity>> =
         videoDao.observeChannelEpisodes(folderId, channel)
 
+    fun videosInFolder(folderId: Long): Flow<List<VideoEntity>> =
+        videoDao.observeByFolder(folderId)
+
     suspend fun addFolder(name: String, treeUri: String, type: FolderType): Long {
         val id = folderDao.upsert(FolderEntity(name = name, treeUri = treeUri, type = type.name))
         rescanFolder(FolderEntity(id = id, name = name, treeUri = treeUri, type = type.name))

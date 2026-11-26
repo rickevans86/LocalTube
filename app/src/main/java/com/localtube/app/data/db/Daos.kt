@@ -60,6 +60,9 @@ interface VideoDao {
     )
     fun observeChannelEpisodes(folderId: Long, channel: String): Flow<List<VideoEntity>>
 
+    @Query("SELECT * FROM videos WHERE folderId = :folderId AND hidden = 0 ORDER BY title")
+    fun observeByFolder(folderId: Long): Flow<List<VideoEntity>>
+
     @Query("UPDATE videos SET hidden = :hidden WHERE documentUri = :uri")
     suspend fun setHidden(uri: String, hidden: Boolean)
 }

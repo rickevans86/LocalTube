@@ -3,15 +3,23 @@ package com.localtube.app.feature.player
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -22,6 +30,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -89,8 +98,20 @@ fun PlayerScreen(
                 }
             })
             setMediaItem(MediaItem.fromUri(Uri.parse(videoUri)))
+            // Keep playing: advance through the queue and loop when it ends.
+            repeatMode = Player.REPEAT_MODE_ALL
             prepare()
             playWhenReady = true
+        }
+    }
+
+    // Queue the rest of the shuffled feed so a finished video auto-advances.
+    LaunchedEffect(upNext) {
+        if (upNext.isNotEmpty() && player.mediaItemCount <= 1) {
+            val others = upNext
+                .filter { it.documentUri != videoUri }
+                .map { MediaItem.fromUri(Uri.parse(it.documentUri)) }
+            if (others.isNotEmpty()) player.addMediaItems(others)
         }
     }
 
@@ -113,6 +134,9 @@ fun PlayerScreen(
                     this.player = player
                     useController = true
                     keepScreenOn = true
+                    // No playlist, so hide the next/previous buttons.
+                    setShowNextButton(false)
+                    setShowPreviousButton(false)
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -136,10 +160,49 @@ fun PlayerScreen(
         }
 
         if (upNext.isNotEmpty()) {
-            Column(modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(12.dp)) {
-                Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                    items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
+            var trayVisible by remember { mutableStateOf(false) }
+            Column(
+                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                // Grab handle: swipe up to reveal the tray, down to hide (tap toggles).
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 10.dp)
+                        .pointerInput(Unit) {
+                            detectVerticalDragGestures { _, dragAmount ->
+                                if (dragAmount < -6f) trayVisible = true
+                                else if (dragAmount > 6f) trayVisible = false
+                            }
+                        }
+                        .clickable { trayVisible = !trayVisible },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .width(44.dp)
+                            .height(5.dp)
+                            .clip(RoundedCornerShape(999.dp))
+                            .background(Color.White.copy(alpha = 0.6f)),
+                    )
+                }
+                AnimatedVisibility(
+                    visible = trayVisible,
+                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Color.Black.copy(alpha = 0.55f))
+                            .padding(12.dp),
+                    ) {
+                        Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                        LazyRow(modifier = Modifier.padding(top = 6.dp)) {
+                            items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
+                        }
+                    }
                 }
             }
         }
