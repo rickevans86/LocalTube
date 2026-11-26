@@ -3,6 +3,7 @@ package com.localtube.app.feature.player
 import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
+import android.view.View
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -10,16 +11,13 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -88,6 +86,7 @@ fun PlayerScreen(
     val context = LocalContext.current
     val startedAt = remember { System.currentTimeMillis() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
+    var controlsVisible by remember { mutableStateOf(false) }
 
     val player = remember {
         ExoPlayer.Builder(context).build().apply {
@@ -137,6 +136,12 @@ fun PlayerScreen(
                     // No playlist, so hide the next/previous buttons.
                     setShowNextButton(false)
                     setShowPreviousButton(false)
+                    // Reveal the up-next row with the controls (shown on tap).
+                    setControllerVisibilityListener(
+                        PlayerView.ControllerVisibilityListener { visibility ->
+                            controlsVisible = visibility == View.VISIBLE
+                        },
+                    )
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -159,50 +164,21 @@ fun PlayerScreen(
             )
         }
 
-        if (upNext.isNotEmpty()) {
-            var trayVisible by remember { mutableStateOf(false) }
+        AnimatedVisibility(
+            visible = controlsVisible && upNext.isNotEmpty(),
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(bottom = 56.dp),
+        ) {
             Column(
-                modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth(),
-                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.Black.copy(alpha = 0.55f))
+                    .padding(12.dp),
             ) {
-                // Grab handle: swipe up to reveal the tray, down to hide (tap toggles).
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp)
-                        .pointerInput(Unit) {
-                            detectVerticalDragGestures { _, dragAmount ->
-                                if (dragAmount < -6f) trayVisible = true
-                                else if (dragAmount > 6f) trayVisible = false
-                            }
-                        }
-                        .clickable { trayVisible = !trayVisible },
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .width(44.dp)
-                            .height(5.dp)
-                            .clip(RoundedCornerShape(999.dp))
-                            .background(Color.White.copy(alpha = 0.6f)),
-                    )
-                }
-                AnimatedVisibility(
-                    visible = trayVisible,
-                    enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-                    exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-                ) {
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .padding(12.dp),
-                    ) {
-                        Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                        LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                            items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
-                        }
-                    }
+                Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                LazyRow(modifier = Modifier.padding(top = 6.dp)) {
+                    items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
                 }
             }
         }
