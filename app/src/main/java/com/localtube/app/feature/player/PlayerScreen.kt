@@ -4,6 +4,7 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.os.ParcelFileDescriptor
+import android.view.View
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -26,7 +27,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -80,30 +80,30 @@ fun PlayerScreen(
     val context = LocalContext.current
     val startedAt = remember { System.currentTimeMillis() }
 
-    // libVLC backend — plays almost any codec/container.
     val libVlc = remember {
         LibVLC(context, arrayListOf("--no-drop-late-frames", "--no-skip-frames"))
     }
     val mediaPlayer = remember { MediaPlayer(libVlc) }
     val pfdRef = remember { mutableStateOf<ParcelFileDescriptor?>(null) }
+    val started = remember { mutableStateOf(false) }
     var playing by remember { mutableStateOf(true) }
 
-    // Open the SAF document as a file descriptor and hand it to libVLC.
-    LaunchedEffect(videoUri) {
+    // Open the SAF document as a fd and start playback. Called only once the VLC
+    // surface view is attached to the window — starting earlier can crash natively.
+    fun startPlayback() {
+        if (started.value) return
         try {
-            val pfd = context.contentResolver.openFileDescriptor(Uri.parse(videoUri), "r")
+            val pfd = context.contentResolver.openFileDescriptor(Uri.parse(videoUri), "r") ?: return
             pfdRef.value = pfd
-            if (pfd != null) {
-                val media = Media(libVlc, pfd.fileDescriptor)
-                media.setHWDecoderEnabled(true, false)
-                mediaPlayer.media = media
-                media.release()
-                mediaPlayer.play()
-                playing = true
-            }
+            val media = Media(libVlc, pfd.fileDescriptor)
+            media.setHWDecoderEnabled(true, false)
+            mediaPlayer.media = media
+            media.release()
+            mediaPlayer.play()
+            started.value = true
+            playing = true
         } catch (_: Exception) {
-            // Playback failure is surfaced via the VLC surface staying blank;
-            // a user-facing error state is a follow-up.
+            // Leave the surface blank; a user-facing error state is a follow-up.
         }
     }
 
@@ -112,12 +112,15 @@ fun PlayerScreen(
         val previousOrientation = activity?.requestedOrientation
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
         onDispose {
-            val watched = mediaPlayer.time.coerceAtLeast(0)
-            vm.record(videoUri, startedAt, watched)
-            mediaPlayer.stop()
-            mediaPlayer.detachViews()
-            mediaPlayer.release()
-            libVlc.release()
+            try {
+                val watched = mediaPlayer.time.coerceAtLeast(0)
+                vm.record(videoUri, startedAt, watched)
+                mediaPlayer.stop()
+                mediaPlayer.detachViews()
+                mediaPlayer.release()
+                libVlc.release()
+            } catch (_: Exception) {
+            }
             pfdRef.value?.close()
             if (previousOrientation != null) activity.requestedOrientation = previousOrientation
         }
@@ -126,13 +129,24 @@ fun PlayerScreen(
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF101624))) {
         AndroidView(
             factory = { ctx ->
-                VLCVideoLayout(ctx).also { layout ->
-                    layout.keepScreenOn = true
-                    try {
-                        mediaPlayer.attachViews(layout, null, false, false)
-                    } catch (_: Exception) {
-                        // Avoid taking down the app if the surface can't attach.
-                    }
+                VLCVideoLayout(ctx).apply {
+                    keepScreenOn = true
+                    addOnAttachStateChangeListener(object : View.OnAttachStateChangeListener {
+                        override fun onViewAttachedToWindow(v: View) {
+                            try {
+                                mediaPlayer.attachViews(this@apply, null, false, false)
+                            } catch (_: Exception) {
+                            }
+                            startPlayback()
+                        }
+
+                        override fun onViewDetachedFromWindow(v: View) {
+                            try {
+                                mediaPlayer.detachViews()
+                            } catch (_: Exception) {
+                            }
+                        }
+                    })
                 }
             },
             modifier = Modifier.fillMaxSize(),
@@ -145,7 +159,6 @@ fun PlayerScreen(
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = Color.White)
         }
 
-        // Center play/pause.
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
@@ -153,12 +166,15 @@ fun PlayerScreen(
                 .clip(CircleShape)
                 .background(Color.White.copy(alpha = 0.9f))
                 .clickable {
-                    if (mediaPlayer.isPlaying) {
-                        mediaPlayer.pause()
-                        playing = false
-                    } else {
-                        mediaPlayer.play()
-                        playing = true
+                    try {
+                        if (mediaPlayer.isPlaying) {
+                            mediaPlayer.pause()
+                            playing = false
+                        } else {
+                            mediaPlayer.play()
+                            playing = true
+                        }
+                    } catch (_: Exception) {
                     }
                 },
             contentAlignment = Alignment.Center,
