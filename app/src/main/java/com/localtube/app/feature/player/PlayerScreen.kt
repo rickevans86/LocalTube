@@ -71,8 +71,17 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
-class PlayerViewModel(private val repo: ContentRepository) : ViewModel() {
-    val upNext = repo.homeFeed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+class PlayerViewModel(
+    private val repo: ContentRepository,
+    folderId: Long?,
+    channel: String?,
+) : ViewModel() {
+    // Opened from a channel → up-next is just that channel's episodes (in order).
+    // Opened from anywhere else → the shuffled whole-library feed.
+    private val source =
+        if (folderId != null && channel != null) repo.channelEpisodes(folderId, channel)
+        else repo.homeFeed
+    val upNext = source.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
@@ -86,11 +95,13 @@ class PlayerViewModel(private val repo: ContentRepository) : ViewModel() {
 fun PlayerScreen(
     container: AppContainer,
     videoUri: String,
+    folderId: Long?,
+    channel: String?,
     onBack: () -> Unit,
     onOpenVideo: (String) -> Unit,
 ) {
     val vm: PlayerViewModel = viewModel(
-        factory = viewModelFactory { initializer { PlayerViewModel(container.repository) } },
+        factory = viewModelFactory { initializer { PlayerViewModel(container.repository, folderId, channel) } },
     )
     val upNext by vm.upNext.collectAsState()
     val meta by vm.meta.collectAsState()
@@ -125,13 +136,16 @@ fun PlayerScreen(
         }
     }
 
-    // Queue the rest of the shuffled feed so a finished video auto-advances.
+    // Queue what comes next so a finished video auto-advances. In a channel the
+    // episodes play in order starting after the current one (wrapping around);
+    // otherwise it's the rest of the shuffled feed.
     LaunchedEffect(upNext) {
         if (upNext.isNotEmpty() && player.mediaItemCount <= 1) {
-            val others = upNext
-                .filter { it.documentUri != videoUri }
-                .map { MediaItem.fromUri(Uri.parse(it.documentUri)) }
-            if (others.isNotEmpty()) player.addMediaItems(others)
+            val idx = upNext.indexOfFirst { it.documentUri == videoUri }
+            val ordered = if (idx >= 0) upNext.drop(idx + 1) + upNext.take(idx)
+            else upNext.filter { it.documentUri != videoUri }
+            val items = ordered.map { MediaItem.fromUri(Uri.parse(it.documentUri)) }
+            if (items.isNotEmpty()) player.addMediaItems(items)
         }
     }
 

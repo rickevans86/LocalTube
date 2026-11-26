@@ -46,7 +46,7 @@ import com.localtube.app.feature.settings.SettingsScreen
 object Routes {
     const val MAIN = "main"
     const val CHANNEL = "channel/{folderId}/{channel}"
-    const val PLAYER = "player/{uri}"
+    const val PLAYER = "player/{uri}?folderId={folderId}&channel={channel}"
     const val GATE = "gate"
     const val SETTINGS = "settings"
     const val FOLDERS = "folders"
@@ -57,12 +57,18 @@ object Routes {
 
     // Content URIs contain '/' which Navigation mishandles in a route arg, so the
     // video URI is passed URL-safe Base64-encoded and decoded in the player.
-    fun player(videoUri: String): String {
+    // When opened from a channel, the folderId + channel are carried along so
+    // the player's up-next is limited to that channel's episodes.
+    fun player(videoUri: String, folderId: Long? = null, channel: String? = null): String {
         val encoded = Base64.encodeToString(
             videoUri.toByteArray(),
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
         )
-        return "player/$encoded"
+        return if (folderId != null && channel != null) {
+            "player/$encoded?folderId=$folderId&channel=${Uri.encode(channel)}"
+        } else {
+            "player/$encoded"
+        }
     }
 }
 
@@ -106,13 +112,21 @@ fun LocalTubeRoot(container: AppContainer) {
                 container = container,
                 folderId = folderId,
                 channel = channel,
-                onOpenVideo = { nav.navigate(Routes.player(it)) },
+                onOpenVideo = { nav.navigate(Routes.player(it, folderId, channel)) },
                 onBack = { nav.popBackStack() },
             )
         }
         composable(
             Routes.PLAYER,
-            arguments = listOf(navArgument("uri") { type = NavType.StringType }),
+            arguments = listOf(
+                navArgument("uri") { type = NavType.StringType },
+                navArgument("folderId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("channel") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+            ),
         ) { entry ->
             val uri = runCatching {
                 String(
@@ -122,11 +136,18 @@ fun LocalTubeRoot(container: AppContainer) {
                     )
                 )
             }.getOrDefault("")
+            val folderId = entry.arguments?.getLong("folderId")?.takeIf { it >= 0 }
+            val channel = entry.arguments?.getString("channel")?.let { Uri.decode(it) }
             PlayerScreen(
                 container = container,
                 videoUri = uri,
+                folderId = folderId,
+                channel = channel,
                 onBack = { nav.popBackStack() },
-                onOpenVideo = { nav.navigate(Routes.player(it)) { popUpTo(Routes.MAIN) } },
+                onOpenVideo = {
+                    // Keep the same channel context when switching within the player.
+                    nav.navigate(Routes.player(it, folderId, channel)) { popUpTo(Routes.MAIN) }
+                },
             )
         }
         composable(Routes.GATE) {
