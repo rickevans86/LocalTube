@@ -54,6 +54,14 @@ fed a file descriptor opened from the SAF URI — it handles far more
 codecs/containers. Replaces Media3 in the player; the custom transport UI is
 minimal for now (play/pause + back + up-next).
 
+**2026-11-26 — Reverted playback to Media3 ExoPlayer** (AI: Claude)
+libVLC caused a native (uncatchable) crash on opening a video on-device, even
+after deferring attach/play to on-window. Switched back to Media3 ExoPlayer:
+plays `content://` URIs directly, PlayerView gives built-in controls + seek bar,
+and errors arrive as catchable `Player.Listener.onPlayerError` (shown on screen).
+If a real codec gap appears, add FFmpeg/NextLib software decoders to ExoPlayer
+rather than returning to libVLC.
+
 **2026-11-26 — App committed to main at Rick's direction** (AI: Claude)
 The Phase 1 scaffold was pushed straight to `main` on Rick's explicit
 instruction, overriding the base prompt's "agents do not push app code to main
