@@ -1,5 +1,6 @@
 package com.localtube.app.feature.settings
 
+import android.content.Context
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -49,7 +50,9 @@ import com.localtube.app.data.db.FolderEntity
 import com.localtube.app.di.AppContainer
 import com.localtube.app.ui.theme.Coral
 import com.localtube.app.ui.theme.SettingsBg
+import com.localtube.app.update.ApkInstaller
 import com.localtube.app.update.UpdateChecker
+import com.localtube.app.update.UpdateDownloader
 import com.localtube.app.update.UpdateResult
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -113,7 +116,8 @@ fun SettingsScreen(
     val folders by vm.folders.collectAsState()
     val settings by vm.settings.collectAsState()
     val scope = rememberCoroutineScope()
-    var updateText by remember { mutableStateOf("Tap to check") }
+    val context = LocalContext.current
+    var update by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
 
     Column(modifier = Modifier.fillMaxSize().background(SettingsBg).padding(horizontal = 24.dp)) {
         Row(
@@ -126,17 +130,64 @@ fun SettingsScreen(
 
         SettingsRow("Main folders", "${folders.size} folders · become kid categories", onOpenFolders)
         SettingsRow("Screen time", "${settings.dailyLimitMinutes} min/day", onOpenScreenTime)
-        SettingsRow("Check for updates", updateText) {
+        SettingsRow("Check for updates", updateStatusText(update)) {
+            val prev = update
             scope.launch {
-                updateText = "Checking…"
-                updateText = when (val r = vm.checkForUpdates()) {
-                    is UpdateResult.Available -> "Update available: ${r.tag}"
-                    UpdateResult.UpToDate -> "Up to date"
-                    is UpdateResult.Failed -> "Couldn't check: ${r.reason}"
+                update = if (prev is UpdateUi.Available || prev is UpdateUi.NeedPermission) {
+                    UpdateUi.Downloading
+                } else {
+                    UpdateUi.Checking
                 }
+                update = handleUpdateTap(context, prev) { vm.checkForUpdates() }
             }
         }
     }
+}
+
+private sealed interface UpdateUi {
+    data object Idle : UpdateUi
+    data object Checking : UpdateUi
+    data object UpToDate : UpdateUi
+    data class Failed(val reason: String) : UpdateUi
+    data class Available(val tag: String, val url: String) : UpdateUi
+    data class NeedPermission(val tag: String, val url: String) : UpdateUi
+    data object Downloading : UpdateUi
+    data object Installing : UpdateUi
+}
+
+private fun updateStatusText(state: UpdateUi): String = when (state) {
+    UpdateUi.Idle -> "Tap to check"
+    UpdateUi.Checking -> "Checking…"
+    UpdateUi.UpToDate -> "Up to date"
+    is UpdateUi.Failed -> "Couldn't update: ${state.reason}"
+    is UpdateUi.Available -> "${state.tag} ready — tap to install"
+    is UpdateUi.NeedPermission -> "Allow installs, then tap again"
+    UpdateUi.Downloading -> "Downloading…"
+    UpdateUi.Installing -> "Opening installer…"
+}
+
+private suspend fun handleUpdateTap(
+    context: Context,
+    current: UpdateUi,
+    check: suspend () -> UpdateResult,
+): UpdateUi = when (current) {
+    is UpdateUi.Available -> startInstall(context, current.tag, current.url)
+    is UpdateUi.NeedPermission -> startInstall(context, current.tag, current.url)
+    else -> when (val r = check()) {
+        is UpdateResult.Available -> UpdateUi.Available(r.tag, r.apkUrl)
+        UpdateResult.UpToDate -> UpdateUi.UpToDate
+        is UpdateResult.Failed -> UpdateUi.Failed(r.reason)
+    }
+}
+
+private suspend fun startInstall(context: Context, tag: String, url: String): UpdateUi {
+    if (!ApkInstaller.canInstall(context)) {
+        context.startActivity(ApkInstaller.unknownSourcesSettingsIntent(context))
+        return UpdateUi.NeedPermission(tag, url)
+    }
+    val file = UpdateDownloader.download(context, url, tag) ?: return UpdateUi.Failed("Download failed")
+    ApkInstaller.install(context, file)
+    return UpdateUi.Installing
 }
 
 @Composable

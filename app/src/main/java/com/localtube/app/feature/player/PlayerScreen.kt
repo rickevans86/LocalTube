@@ -128,7 +128,11 @@ fun PlayerScreen(
             factory = { ctx ->
                 VLCVideoLayout(ctx).also { layout ->
                     layout.keepScreenOn = true
-                    mediaPlayer.attachViews(layout, null, false, false)
+                    try {
+                        mediaPlayer.attachViews(layout, null, false, false)
+                    } catch (_: Exception) {
+                        // Avoid taking down the app if the surface can't attach.
+                    }
                 }
             },
             modifier = Modifier.fillMaxSize(),

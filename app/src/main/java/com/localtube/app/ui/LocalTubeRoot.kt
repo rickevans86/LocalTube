@@ -1,6 +1,7 @@
 package com.localtube.app.ui
 
 import android.net.Uri
+import android.util.Base64
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -26,7 +27,16 @@ object Routes {
     const val SCREEN_TIME = "screentime"
 
     fun channel(folderId: Long, channel: String) = "channel/$folderId/${Uri.encode(channel)}"
-    fun player(videoUri: String) = "player/${Uri.encode(videoUri)}"
+
+    // Content URIs contain '/' which Navigation mishandles in a route arg, so the
+    // video URI is passed URL-safe Base64-encoded and decoded in the player.
+    fun player(videoUri: String): String {
+        val encoded = Base64.encodeToString(
+            videoUri.toByteArray(),
+            Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
+        )
+        return "player/$encoded"
+    }
 }
 
 @Composable
@@ -62,7 +72,14 @@ fun LocalTubeRoot(container: AppContainer) {
             Routes.PLAYER,
             arguments = listOf(navArgument("uri") { type = NavType.StringType }),
         ) { entry ->
-            val uri = Uri.decode(entry.arguments?.getString("uri").orEmpty())
+            val uri = runCatching {
+                String(
+                    Base64.decode(
+                        entry.arguments?.getString("uri").orEmpty(),
+                        Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
+                    )
+                )
+            }.getOrDefault("")
             PlayerScreen(
                 container = container,
                 videoUri = uri,
