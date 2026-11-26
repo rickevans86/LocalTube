@@ -4,6 +4,9 @@ import android.app.Activity
 import android.content.pm.ActivityInfo
 import android.net.Uri
 import android.view.View
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -121,10 +124,15 @@ fun PlayerScreen(
         val activity = context as? Activity
         val previousOrientation = activity?.requestedOrientation
         activity?.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+        // Immersive: hide the system bars so the nav buttons don't cover the player.
+        val insets = activity?.window?.let { WindowCompat.getInsetsController(it, it.decorView) }
+        insets?.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        insets?.hide(WindowInsetsCompat.Type.systemBars())
         onDispose {
             val watched = player.currentPosition.coerceAtLeast(0)
             vm.record(videoUri, startedAt, watched)
             player.release()
+            insets?.show(WindowInsetsCompat.Type.systemBars())
             if (previousOrientation != null) activity.requestedOrientation = previousOrientation
         }
     }
