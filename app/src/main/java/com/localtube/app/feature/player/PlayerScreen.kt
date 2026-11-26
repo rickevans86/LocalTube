@@ -44,6 +44,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -126,26 +129,58 @@ fun PlayerScreen(
         }
     }
 
+    // Pause playback when the app goes to the background (no background play).
+    val lifecycleOwner = context as? LifecycleOwner
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP) player.pause()
+        }
+        lifecycleOwner?.lifecycle?.addObserver(observer)
+        onDispose { lifecycleOwner?.lifecycle?.removeObserver(observer) }
+    }
+
     Box(modifier = Modifier.fillMaxSize().background(Color(0xFF101624))) {
-        AndroidView(
-            factory = { ctx ->
-                PlayerView(ctx).apply {
-                    this.player = player
-                    useController = true
-                    keepScreenOn = true
-                    // No playlist, so hide the next/previous buttons.
-                    setShowNextButton(false)
-                    setShowPreviousButton(false)
-                    // Reveal the up-next row with the controls (shown on tap).
-                    setControllerVisibilityListener(
-                        PlayerView.ControllerVisibilityListener { visibility ->
-                            controlsVisible = visibility == View.VISIBLE
-                        },
-                    )
+        Column(modifier = Modifier.fillMaxSize()) {
+            AndroidView(
+                factory = { ctx ->
+                    PlayerView(ctx).apply {
+                        this.player = player
+                        useController = true
+                        keepScreenOn = true
+                        // No playlist, so hide the next/previous buttons.
+                        setShowNextButton(false)
+                        setShowPreviousButton(false)
+                        // Reveal the up-next row with the controls (shown on tap).
+                        setControllerVisibilityListener(
+                            PlayerView.ControllerVisibilityListener { visibility ->
+                                controlsVisible = visibility == View.VISIBLE
+                            },
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().weight(1f),
+            )
+
+            // Sits BELOW the player so it never covers the seek bar; the video
+            // shrinks slightly while it's shown.
+            AnimatedVisibility(
+                visible = controlsVisible && upNext.isNotEmpty(),
+                enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .padding(12.dp),
+                ) {
+                    Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    LazyRow(modifier = Modifier.padding(top = 6.dp)) {
+                        items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
+                    }
                 }
-            },
-            modifier = Modifier.fillMaxSize(),
-        )
+            }
+        }
 
         IconButton(
             onClick = onBack,
@@ -162,25 +197,6 @@ fun PlayerScreen(
                 fontSize = 13.sp,
                 modifier = Modifier.align(Alignment.Center).padding(24.dp),
             )
-        }
-
-        AnimatedVisibility(
-            visible = controlsVisible && upNext.isNotEmpty(),
-            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
-            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut(),
-            modifier = Modifier.align(Alignment.BottomStart).fillMaxWidth().padding(bottom = 56.dp),
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.Black.copy(alpha = 0.55f))
-                    .padding(12.dp),
-            ) {
-                Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                    items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
-                }
-            }
         }
     }
 }
