@@ -64,13 +64,17 @@ import androidx.media3.ui.PlayerView
 import com.localtube.app.data.ContentRepository
 import com.localtube.app.data.db.VideoEntity
 import com.localtube.app.di.AppContainer
+import coil.compose.AsyncImage
 import com.localtube.app.ui.VideoThumb
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class PlayerViewModel(private val repo: ContentRepository) : ViewModel() {
     val upNext = repo.homeFeed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     fun record(uri: String, startedAt: Long, watchedMs: Long) {
         viewModelScope.launch { repo.recordWatch(uri, startedAt, watchedMs) }
@@ -89,6 +93,7 @@ fun PlayerScreen(
         factory = viewModelFactory { initializer { PlayerViewModel(container.repository) } },
     )
     val upNext by vm.upNext.collectAsState()
+    val meta by vm.meta.collectAsState()
     val context = LocalContext.current
     val startedAt = remember { System.currentTimeMillis() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -184,7 +189,7 @@ fun PlayerScreen(
                 ) {
                     Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                        items(upNext) { v -> UpNextThumb(v, onOpenVideo) }
+                        items(upNext) { v -> UpNextThumb(v, meta[v.documentUri]?.backdropUrl, onOpenVideo) }
                     }
                 }
             }
@@ -210,7 +215,7 @@ fun PlayerScreen(
 }
 
 @Composable
-private fun UpNextThumb(video: VideoEntity, onOpen: (String) -> Unit) {
+private fun UpNextThumb(video: VideoEntity, artUrl: String?, onOpen: (String) -> Unit) {
     Box(
         modifier = Modifier
             .padding(end = 10.dp)
@@ -220,6 +225,15 @@ private fun UpNextThumb(video: VideoEntity, onOpen: (String) -> Unit) {
             .background(Color.DarkGray)
             .clickable { onOpen(video.documentUri) },
     ) {
-        VideoThumb(video.documentUri, modifier = Modifier.fillMaxSize())
+        if (artUrl != null) {
+            AsyncImage(
+                model = artUrl,
+                contentDescription = video.title,
+                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            VideoThumb(video.documentUri, modifier = Modifier.fillMaxSize())
+        }
     }
 }

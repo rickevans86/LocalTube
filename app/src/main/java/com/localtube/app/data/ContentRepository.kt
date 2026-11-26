@@ -3,6 +3,8 @@ package com.localtube.app.data
 import com.localtube.app.data.db.ChannelRow
 import com.localtube.app.data.db.FolderDao
 import com.localtube.app.data.db.FolderEntity
+import com.localtube.app.data.db.MetaDao
+import com.localtube.app.data.db.MetaEntity
 import com.localtube.app.data.db.VideoDao
 import com.localtube.app.data.db.VideoEntity
 import com.localtube.app.data.db.WatchDao
@@ -13,12 +15,15 @@ class ContentRepository(
     private val folderDao: FolderDao,
     private val videoDao: VideoDao,
     private val watchDao: WatchDao,
+    private val metaDao: MetaDao,
     private val scanner: MediaScanner,
 ) {
     val homeFeed: Flow<List<VideoEntity>> = videoDao.observeShuffled(limit = 60)
     val movies: Flow<List<VideoEntity>> = videoDao.observeMovies()
     val channels: Flow<List<ChannelRow>> = videoDao.observeChannels()
     val folders: Flow<List<FolderEntity>> = folderDao.observeAll()
+    val recent: Flow<List<VideoEntity>> = videoDao.observeRecent()
+    val meta: Flow<List<MetaEntity>> = metaDao.observeAll()
 
     fun channelEpisodes(folderId: Long, channel: String): Flow<List<VideoEntity>> =
         videoDao.observeChannelEpisodes(folderId, channel)
@@ -28,9 +33,9 @@ class ContentRepository(
 
     fun search(query: String): Flow<List<VideoEntity>> = videoDao.search(query)
 
-    val recent: Flow<List<VideoEntity>> = videoDao.observeRecent()
-
-    suspend fun addFolder(name: String, treeUri: String, type: FolderType): Long {
+    /** Adds a folder, auto-detecting its type from name/shape, then scans it. */
+    suspend fun addFolder(name: String, treeUri: String): Long {
+        val type = scanner.detectType(name, treeUri)
         val id = folderDao.upsert(FolderEntity(name = name, treeUri = treeUri, type = type.name))
         rescanFolder(FolderEntity(id = id, name = name, treeUri = treeUri, type = type.name))
         return id
@@ -61,4 +66,28 @@ class ContentRepository(
 
     suspend fun recordWatch(uri: String, startedAt: Long, watchedMs: Long) =
         watchDao.insert(WatchEventEntity(videoUri = uri, startedAt = startedAt, watchedMs = watchedMs))
+
+    suspend fun saveMeta(meta: MetaEntity) = metaDao.upsert(meta)
+
+    /** Auto-matches every movie and series to artwork; keeps manual fixes. */
+    suspend fun matchAll() {
+        for (movie in videoDao.getMovies()) {
+            val key = movie.documentUri
+            if (metaDao.get(key)?.manual == true) continue
+            val query = NameParser.cleanTitle(movie.title)
+            val hint = NameParser.imdbId(movie.title)
+            ArtworkClient.match("movie", key, query, hint)?.let { metaDao.upsert(it) }
+        }
+        for (channel in videoDao.getChannelsOnce()) {
+            val key = seriesKey(channel.folderId, channel.name)
+            if (metaDao.get(key)?.manual == true) continue
+            val query = NameParser.cleanTitle(channel.name)
+            val hint = NameParser.imdbId(channel.name)
+            ArtworkClient.match("series", key, query, hint)?.let { metaDao.upsert(it) }
+        }
+    }
+
+    companion object {
+        fun seriesKey(folderId: Long, channelName: String) = "series:$folderId:$channelName"
+    }
 }

@@ -26,6 +26,7 @@ class AppContainer(context: Context) {
         folderDao = database.folderDao(),
         videoDao = database.videoDao(),
         watchDao = database.watchDao(),
+        metaDao = database.metaDao(),
         scanner = scanner,
     )
 

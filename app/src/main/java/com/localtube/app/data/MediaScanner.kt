@@ -1,7 +1,6 @@
 package com.localtube.app.data
 
 import android.content.Context
-import android.media.MediaMetadataRetriever
 import android.net.Uri
 import androidx.documentfile.provider.DocumentFile
 import com.localtube.app.data.db.FolderEntity
@@ -13,6 +12,15 @@ import kotlinx.coroutines.withContext
 class MediaScanner(private val context: Context) {
 
     private val videoExtensions = setOf("mp4", "mkv", "webm", "m4v", "3gp", "mov", "avi", "ts")
+
+    /** Guesses a folder's type from its name/shape (name wins for movies). */
+    suspend fun detectType(name: String, treeUri: String): FolderType = withContext(Dispatchers.IO) {
+        if (name.lowercase().contains("movie")) return@withContext FolderType.MOVIES
+        val root = DocumentFile.fromTreeUri(context, Uri.parse(treeUri))
+            ?: return@withContext FolderType.VIDEOS
+        val hasSubdirs = root.listFiles().any { it.isDirectory }
+        if (hasSubdirs) FolderType.CHANNELS else FolderType.VIDEOS
+    }
 
     suspend fun scan(folder: FolderEntity): List<VideoEntity> = withContext(Dispatchers.IO) {
         val root = DocumentFile.fromTreeUri(context, Uri.parse(folder.treeUri))
@@ -66,20 +74,12 @@ class MediaScanner(private val context: Context) {
             folderId = folderId,
             channelName = channelName,
             title = prettyTitle(name),
-            durationMs = readDuration(file.uri),
+            // Duration is not read during the scan (it was the bottleneck on large
+            // libraries). The badge is simply hidden when unknown.
+            durationMs = 0L,
             isMovie = isMovie,
             addedAt = System.currentTimeMillis(),
         )
-    }
-
-    private fun readDuration(uri: Uri): Long = try {
-        val retriever = MediaMetadataRetriever()
-        retriever.setDataSource(context, uri)
-        val value = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)
-        retriever.release()
-        value?.toLongOrNull() ?: 0L
-    } catch (_: Exception) {
-        0L
     }
 
     private fun prettyTitle(fileName: String): String =

@@ -10,10 +10,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -71,7 +74,7 @@ class SettingsViewModel(
     )
 
     fun addFolder(name: String, treeUri: String) {
-        viewModelScope.launch { repo.addFolder(name, treeUri, FolderType.VIDEOS) }
+        viewModelScope.launch { repo.addFolder(name, treeUri) }
     }
 
     fun cycleType(folder: FolderEntity) {
@@ -110,6 +113,7 @@ fun SettingsScreen(
     container: AppContainer,
     onOpenFolders: () -> Unit,
     onOpenScreenTime: () -> Unit,
+    onOpenScanMatch: () -> Unit,
     onDone: () -> Unit,
 ) {
     val vm: SettingsViewModel = viewModel(factory = settingsVm(container))
@@ -119,7 +123,13 @@ fun SettingsScreen(
     val context = LocalContext.current
     var update by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
 
-    Column(modifier = Modifier.fillMaxSize().background(SettingsBg).padding(horizontal = 24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SettingsBg)
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .padding(horizontal = 24.dp),
+    ) {
         Row(
             modifier = Modifier.fillMaxWidth().padding(vertical = 22.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -129,6 +139,7 @@ fun SettingsScreen(
         }
 
         SettingsRow("Main folders", "${folders.size} folders · become kid categories", onOpenFolders)
+        SettingsRow("Scan movies & TV shows", "Match posters · fix mismatches", onOpenScanMatch)
         SettingsRow("Screen time", "${settings.dailyLimitMinutes} min/day", onOpenScreenTime)
         SettingsRow("Check for updates", updateStatusText(update)) {
             val prev = update
@@ -226,7 +237,13 @@ fun MainFoldersScreen(container: AppContainer, onBack: () -> Unit) {
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(SettingsBg).padding(horizontal = 24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SettingsBg)
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .padding(horizontal = 24.dp),
+    ) {
         Row(modifier = Modifier.padding(vertical = 18.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -294,7 +311,13 @@ fun ScreenTimeScreen(container: AppContainer, onBack: () -> Unit) {
     val vm: SettingsViewModel = viewModel(factory = settingsVm(container))
     val settings by vm.settings.collectAsState()
 
-    Column(modifier = Modifier.fillMaxSize().background(SettingsBg).padding(24.dp)) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(SettingsBg)
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .padding(24.dp),
+    ) {
         Row(modifier = Modifier.padding(bottom = 22.dp), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")

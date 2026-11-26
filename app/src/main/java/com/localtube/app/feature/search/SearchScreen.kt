@@ -40,12 +40,16 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class SearchViewModel(repo: ContentRepository) : ViewModel() {
     private val queryFlow = MutableStateFlow("")
     val query = queryFlow.asStateFlow()
+
+    val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     val results = queryFlow.flatMapLatest { q ->
         if (q.isBlank()) flowOf(emptyList()) else repo.search(q.trim())
@@ -63,6 +67,7 @@ fun SearchScreen(container: AppContainer, onOpenVideo: (String) -> Unit) {
     )
     val query by vm.query.collectAsState()
     val results by vm.results.collectAsState()
+    val meta by vm.meta.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(KidBg).padding(horizontal = 20.dp)) {
         OutlinedTextField(
@@ -86,7 +91,7 @@ fun SearchScreen(container: AppContainer, onOpenVideo: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(vertical = 8.dp),
             ) {
-                items(results) { video -> VideoCard(video, onOpenVideo) }
+                items(results) { video -> VideoCard(video, onOpenVideo, meta[video.documentUri]?.backdropUrl) }
             }
         }
     }

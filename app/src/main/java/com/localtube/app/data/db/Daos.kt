@@ -78,6 +78,27 @@ interface VideoDao {
 
     @Query("UPDATE videos SET hidden = :hidden WHERE documentUri = :uri")
     suspend fun setHidden(uri: String, hidden: Boolean)
+
+    @Query("SELECT * FROM videos WHERE isMovie = 1")
+    suspend fun getMovies(): List<VideoEntity>
+
+    @Query(
+        "SELECT channelName AS name, folderId AS folderId, COUNT(*) AS episodeCount " +
+            "FROM videos WHERE channelName IS NOT NULL GROUP BY folderId, channelName"
+    )
+    suspend fun getChannelsOnce(): List<ChannelRow>
+}
+
+@Dao
+interface MetaDao {
+    @Query("SELECT * FROM meta")
+    fun observeAll(): Flow<List<MetaEntity>>
+
+    @Query("SELECT * FROM meta WHERE itemKey = :key")
+    suspend fun get(key: String): MetaEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(meta: MetaEntity)
 }
 
 @Dao

@@ -30,10 +30,13 @@ import com.localtube.app.di.AppContainer
 import com.localtube.app.ui.VideoCard
 import com.localtube.app.ui.theme.KidBg
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 class RecentViewModel(repo: ContentRepository) : ViewModel() {
     val recent = repo.recent.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 }
 
 @Composable
@@ -42,6 +45,7 @@ fun YourStuffScreen(container: AppContainer, onOpenVideo: (String) -> Unit) {
         factory = viewModelFactory { initializer { RecentViewModel(container.repository) } },
     )
     val recent by vm.recent.collectAsState()
+    val meta by vm.meta.collectAsState()
 
     Column(modifier = Modifier.fillMaxSize().background(KidBg).padding(horizontal = 20.dp)) {
         Text(
@@ -61,7 +65,7 @@ fun YourStuffScreen(container: AppContainer, onOpenVideo: (String) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(bottom = 12.dp),
             ) {
-                items(recent) { video -> VideoCard(video, onOpenVideo) }
+                items(recent) { video -> VideoCard(video, onOpenVideo, meta[video.documentUri]?.backdropUrl) }
             }
         }
     }

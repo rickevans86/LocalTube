@@ -30,6 +30,7 @@ import com.localtube.app.feature.channel.ChannelScreen
 import com.localtube.app.feature.gate.ParentGateScreen
 import com.localtube.app.feature.home.HomeScreen
 import com.localtube.app.feature.library.YourStuffScreen
+import com.localtube.app.feature.match.ScanMatchScreen
 import com.localtube.app.feature.player.PlayerScreen
 import com.localtube.app.feature.search.SearchScreen
 import com.localtube.app.feature.settings.MainFoldersScreen
@@ -44,6 +45,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val FOLDERS = "folders"
     const val SCREEN_TIME = "screentime"
+    const val SCAN_MATCH = "scanmatch"
 
     fun channel(folderId: Long, channel: String) = "channel/$folderId/${Uri.encode(channel)}"
 
@@ -118,6 +120,7 @@ fun LocalTubeRoot(container: AppContainer) {
                 container = container,
                 onOpenFolders = { nav.navigate(Routes.FOLDERS) },
                 onOpenScreenTime = { nav.navigate(Routes.SCREEN_TIME) },
+                onOpenScanMatch = { nav.navigate(Routes.SCAN_MATCH) },
                 onDone = { nav.navigate(Routes.MAIN) { popUpTo(Routes.MAIN) { inclusive = true } } },
             )
         }
@@ -126,6 +129,9 @@ fun LocalTubeRoot(container: AppContainer) {
         }
         composable(Routes.SCREEN_TIME) {
             ScreenTimeScreen(container = container, onBack = { nav.popBackStack() })
+        }
+        composable(Routes.SCAN_MATCH) {
+            ScanMatchScreen(container = container, onBack = { nav.popBackStack() })
         }
     }
 }

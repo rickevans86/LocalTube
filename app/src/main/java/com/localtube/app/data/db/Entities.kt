@@ -50,3 +50,21 @@ data class ChannelRow(
     val name: String,
     val episodeCount: Int,
 )
+
+/**
+ * Artwork/metadata mapping for a movie or a series, fetched from Cinemeta/Metahub.
+ * itemKey is the movie's documentUri, or "series:<folderId>:<channelName>".
+ */
+@Entity(tableName = "meta")
+data class MetaEntity(
+    @PrimaryKey val itemKey: String,
+    val kind: String,          // "movie" or "series"
+    val query: String,
+    val imdbId: String?,
+    val title: String?,
+    val year: String?,
+    val posterUrl: String?,
+    val backdropUrl: String?,
+    val manual: Boolean = false,
+    val updatedAt: Long = 0,
+)

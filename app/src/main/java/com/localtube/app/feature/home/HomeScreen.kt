@@ -38,6 +38,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -46,11 +47,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import coil.compose.AsyncImage
 import com.localtube.app.data.ContentRepository
 import com.localtube.app.data.FolderType
 import com.localtube.app.data.db.ChannelRow
 import com.localtube.app.data.db.FolderEntity
+import com.localtube.app.data.db.MetaEntity
 import com.localtube.app.di.AppContainer
+import com.localtube.app.ui.PosterCard
 import com.localtube.app.ui.VideoCard
 import com.localtube.app.ui.theme.CategoryColors
 import com.localtube.app.ui.theme.Coral
@@ -62,6 +66,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -69,6 +74,8 @@ class HomeViewModel(repo: ContentRepository) : ViewModel() {
     val folders = repo.folders.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val feed = repo.homeFeed.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val channels = repo.channels.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
 
     private val selectedId = MutableStateFlow<Long?>(null)
     val selected = selectedId.asStateFlow()
@@ -97,6 +104,9 @@ fun HomeScreen(
     val channels by vm.channels.collectAsState()
     val selected by vm.selected.collectAsState()
     val folderVideos by vm.folderVideos.collectAsState()
+    val meta by vm.meta.collectAsState()
+
+    val selectedType = folders.firstOrNull { it.id == selected }?.let { FolderType.fromName(it.type) }
 
     Column(modifier = Modifier.fillMaxSize().background(KidBg)) {
         TopBar(onOpenParentArea)
@@ -110,26 +120,69 @@ fun HomeScreen(
             return@Column
         }
 
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(2),
-            modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp),
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(vertical = 12.dp),
-        ) {
-            if (selected != null) {
-                gridItems(folderVideos) { video -> VideoCard(video, onOpenVideo) }
-            } else {
+        when {
+            // A specific MOVIES folder → portrait posters.
+            selected != null && selectedType == FolderType.MOVIES -> LazyVerticalGrid(
+                columns = GridCells.Fixed(3),
+                modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            ) {
+                gridItems(folderVideos) { v ->
+                    PosterCard(v.title, meta[v.documentUri]?.posterUrl) { onOpenVideo(v.documentUri) }
+                }
+            }
+
+            // A specific CHANNELS folder → the shows as posters.
+            selected != null && selectedType == FolderType.CHANNELS -> {
+                val shows = channels.filter { it.folderId == selected }
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(3),
+                    modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                    contentPadding = PaddingValues(vertical = 12.dp),
+                ) {
+                    gridItems(shows) { c ->
+                        val art = meta[ContentRepository.seriesKey(c.folderId, c.name)]?.posterUrl
+                        PosterCard(c.name, art) { onOpenChannel(c.folderId, c.name) }
+                    }
+                }
+            }
+
+            // A specific VIDEOS folder → landscape cards.
+            selected != null -> LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            ) {
+                gridItems(folderVideos) { v -> VideoCard(v, onOpenVideo, meta[v.documentUri]?.backdropUrl) }
+            }
+
+            // All → optional Shows shelf + the shuffled feed.
+            else -> LazyVerticalGrid(
+                columns = GridCells.Fixed(2),
+                modifier = Modifier.weight(1f).padding(horizontal = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(18.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp),
+                contentPadding = PaddingValues(vertical = 12.dp),
+            ) {
                 if (channels.isNotEmpty()) {
                     item(span = { GridItemSpan(2) }) { SectionLabel("Shows") }
                     item(span = { GridItemSpan(2) }) {
                         LazyRow(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                            rowItems(channels) { channel -> ChannelCard(channel, onOpenChannel) }
+                            rowItems(channels) { c ->
+                                val art = meta[ContentRepository.seriesKey(c.folderId, c.name)]?.backdropUrl
+                                ShelfCard(c, art, onOpenChannel)
+                            }
                         }
                     }
                     item(span = { GridItemSpan(2) }) { SectionLabel("Videos") }
                 }
-                gridItems(feed) { video -> VideoCard(video, onOpenVideo) }
+                gridItems(feed) { v -> VideoCard(v, onOpenVideo, meta[v.documentUri]?.backdropUrl) }
             }
         }
     }
@@ -210,27 +263,31 @@ private fun SectionLabel(text: String) {
     Text(text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(top = 8.dp))
 }
 
+/** Landscape show card for the All → Shows shelf. */
 @Composable
-private fun ChannelCard(channel: ChannelRow, onOpen: (Long, String) -> Unit) {
-    Column(
-        modifier = Modifier.width(280.dp).clickable { onOpen(channel.folderId, channel.name) },
-    ) {
+private fun ShelfCard(channel: ChannelRow, artUrl: String?, onOpen: (Long, String) -> Unit) {
+    Column(modifier = Modifier.width(280.dp).clickable { onOpen(channel.folderId, channel.name) }) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .aspectRatio(16f / 7f)
+                .aspectRatio(16f / 9f)
                 .clip(RoundedCornerShape(16.dp))
-                .background(CategoryColors.random())
-                .padding(14.dp),
+                .background(CategoryColors[kotlin.math.abs(channel.name.hashCode()) % CategoryColors.size]),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(channel.name, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            if (artUrl != null) {
+                AsyncImage(
+                    model = artUrl,
+                    contentDescription = channel.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            } else {
+                Text(channel.name, color = Color.White, fontSize = 18.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(12.dp))
+            }
         }
-        Text(
-            "Channel · ${channel.episodeCount} episodes",
-            fontSize = 12.sp,
-            color = Color.Gray,
-            modifier = Modifier.padding(top = 6.dp),
-        )
+        Text(channel.name, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1, modifier = Modifier.padding(top = 6.dp))
+        Text("${channel.episodeCount} episodes", fontSize = 12.sp, color = Color.Gray)
     }
 }
 
