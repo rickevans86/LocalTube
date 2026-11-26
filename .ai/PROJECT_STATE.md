@@ -12,7 +12,7 @@ with per-profile screen-time limits and a kiosk lock. No accounts and no network
 except an optional self-updater.
 
 ## Stack (proposed — see DECISIONS.md; awaiting Rick's approval)
-Kotlin · Jetpack Compose + Material 3 · Media3 (ExoPlayer) · Room · SAF scoped
+Kotlin · Jetpack Compose + Material 3 · libVLC (playback) · Room · SAF scoped
 folder access · Hilt · Gradle (Kotlin DSL) + version catalog. minSdk 26,
 targetSdk 35.
 

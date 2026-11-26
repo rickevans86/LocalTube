@@ -47,6 +47,13 @@ in the authoring environment), so CI provisions Gradle via
 `gradle/actions/setup-gradle`; commit the wrapper jar once generated locally and
 switch CI back to `./gradlew`.
 
+**2026-11-26 — Playback backend: libVLC, not Media3/ExoPlayer** (AI: Claude)
+On-device testing showed SAF `content://` videos not playing under ExoPlayer
+(codec/URI handling). Switched to libVLC (`org.videolan.android:libvlc-all`),
+fed a file descriptor opened from the SAF URI — it handles far more
+codecs/containers. Replaces Media3 in the player; the custom transport UI is
+minimal for now (play/pause + back + up-next).
+
 **2026-11-26 — App committed to main at Rick's direction** (AI: Claude)
 The Phase 1 scaffold was pushed straight to `main` on Rick's explicit
 instruction, overriding the base prompt's "agents do not push app code to main

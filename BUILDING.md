@@ -19,7 +19,8 @@ stack and conventions.
 ## Stack
 
 - Kotlin, Jetpack Compose + Material 3
-- Media3 (ExoPlayer) for playback
+- libVLC (`org.videolan.android:libvlc-all`) for playback — plays SAF
+  `content://` videos via a file descriptor, broad codec support
 - Room for metadata/history, DataStore for settings + the gate PIN
 - Storage Access Framework for scoped folder access (no broad media permission)
 - Manual DI container (`di/AppContainer.kt`) for the scaffold — Hilt is a planned
