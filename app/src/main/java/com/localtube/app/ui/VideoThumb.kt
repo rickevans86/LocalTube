@@ -14,18 +14,26 @@ import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
 import coil.request.videoFrameMillis
 
-/** Shared Coil loader that can decode a frame from a local video file. */
-fun videoImageLoader(context: Context): ImageLoader =
-    ImageLoader.Builder(context)
-        .components { add(VideoFrameDecoder.Factory()) }
-        .crossfade(true)
-        .build()
+/** One shared Coil loader (decodes a frame from a local video file). */
+private object ThumbLoader {
+    @Volatile
+    private var instance: ImageLoader? = null
+
+    fun get(context: Context): ImageLoader =
+        instance ?: synchronized(this) {
+            instance ?: ImageLoader.Builder(context.applicationContext)
+                .components { add(VideoFrameDecoder.Factory()) }
+                .crossfade(true)
+                .build()
+                .also { instance = it }
+        }
+}
 
 /** A video thumbnail generated from a frame of the file itself. */
 @Composable
 fun VideoThumb(uri: String, modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val loader = remember { videoImageLoader(context) }
+    val loader = remember { ThumbLoader.get(context) }
     Box(modifier) {
         AsyncImage(
             model = ImageRequest.Builder(context)
