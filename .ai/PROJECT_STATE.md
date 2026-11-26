@@ -2,7 +2,7 @@
 
 **Repository:** rickevans86/LocalTube
 **Updated:** 2026-11-26
-**Phase:** 1 — MVP app scaffold on main (unverified build)
+**Phase:** 1 — MVP on main; CI builds + releases a signed APK (v1.0.5)
 
 ## What LocalTube is
 An offline, kid-safe Android video player that plays videos already stored on the
@@ -25,8 +25,9 @@ targetSdk 35.
 - `release.yml` present, targeting **self-hosted runner HV01**
   (`[self-hosted, linux, github-actions-linux]`), provisions the Android SDK,
   signs with the RELEASE_* secrets, and publishes to GitHub Releases.
-- **Not yet compiled** — authored without an Android SDK. A first build pass is
-  needed (likely minor dep-version / Media3 opt-in fixes). Tests/lint: not run.
+- **Builds green on CI** — first signed release **v1.0.5** published to GitHub
+  Releases (`app-release.apk`). Build fix applied: added the Material Components
+  dependency for the `Theme.Material3.*` XML parent. Unit tests/lint still TODO.
 - Gradle wrapper jar not committed yet (Android Studio generates it on open; CI
   provisions Gradle directly meanwhile).
 - `AGENTS.md` is in open PR #1 (stack still marked proposed).

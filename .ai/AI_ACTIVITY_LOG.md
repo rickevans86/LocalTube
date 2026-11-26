@@ -27,6 +27,19 @@ entries.
   `.github/workflows/release.yml` targeting the self-hosted runner.
 - Committed directly to `main` at Rick's explicit direction (overriding the
   "no app code to main by hand" rule).
-- Tests: Not run. Lint: Not run. Build: **Not run** — no Android SDK in the
-  authoring environment; a compile pass in Android Studio is required.
+- Tests: Not run. Lint: Not run. Build: **Not run locally** — verified via CI.
 - Commit: see `main`. Follow-ups in HANDOFF.md.
+
+---
+
+**2026-11-26 — Claude**
+- Stood up the release pipeline end to end on self-hosted runner HV01:
+  aligned `runs-on` to its labels (`self-hosted, linux, github-actions-linux`),
+  provisioned the Android SDK (`setup-android` with `packages: ''` to skip the
+  removed `tools` package), switched signing to the `RELEASE_*` secrets.
+- Fixed the one build error CI surfaced: added `com.google.android.material`
+  for the `Theme.Material3.*` XML parent.
+- Result: CI builds, signs and publishes. First release **v1.0.5**
+  (`app-release.apk`) is live on GitHub Releases.
+- Rick set the four `RELEASE_*` signing secrets; keystore generated 2026-11-26.
+- Tests/lint: still to be added.
