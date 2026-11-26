@@ -98,4 +98,7 @@ dependencies {
     implementation(libs.coil.video)
 
     implementation(libs.kotlinx.coroutines.android)
+
+    // Provides the Theme.Material3.* XML parent used by themes.xml.
+    implementation(libs.google.material)
 }
