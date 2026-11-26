@@ -105,7 +105,7 @@ class HomeViewModel(repo: ContentRepository) : ViewModel() {
 @Composable
 fun HomeScreen(
     container: AppContainer,
-    onOpenVideo: (String) -> Unit,
+    onOpenVideo: (uri: String, folderId: Long?, movies: Boolean) -> Unit,
     onOpenChannel: (Long, String) -> Unit,
     onOpenParentArea: () -> Unit,
 ) {
@@ -143,7 +143,7 @@ fun HomeScreen(
                 contentPadding = PaddingValues(vertical = 12.dp),
             ) {
                 gridItems(folderVideos) { v ->
-                    PosterCard(v.title, meta[v.documentUri]?.posterUrl) { onOpenVideo(v.documentUri) }
+                    PosterCard(v.title, meta[v.documentUri]?.posterUrl) { onOpenVideo(v.documentUri, null, true) }
                 }
             }
 
@@ -172,7 +172,9 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 contentPadding = PaddingValues(vertical = 12.dp),
             ) {
-                gridItems(folderVideos) { v -> VideoCard(v, onOpenVideo, meta[v.documentUri]?.backdropUrl) }
+                gridItems(folderVideos) { v ->
+                    VideoCard(v, { onOpenVideo(it, selected, false) }, meta[v.documentUri]?.backdropUrl)
+                }
             }
 
             // All → optional Shows shelf + the shuffled feed.
@@ -195,7 +197,9 @@ fun HomeScreen(
                     }
                     item(span = { GridItemSpan(2) }) { SectionLabel("Videos") }
                 }
-                gridItems(feed) { v -> VideoCard(v, onOpenVideo, meta[v.documentUri]?.backdropUrl) }
+                gridItems(feed) { v ->
+                    VideoCard(v, { onOpenVideo(it, null, false) }, meta[v.documentUri]?.backdropUrl)
+                }
             }
         }
     }

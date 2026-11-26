@@ -46,7 +46,7 @@ import com.localtube.app.feature.settings.SettingsScreen
 object Routes {
     const val MAIN = "main"
     const val CHANNEL = "channel/{folderId}/{channel}"
-    const val PLAYER = "player/{uri}?folderId={folderId}&channel={channel}"
+    const val PLAYER = "player/{uri}?folderId={folderId}&channel={channel}&scope={scope}"
     const val GATE = "gate"
     const val SETTINGS = "settings"
     const val FOLDERS = "folders"
@@ -57,18 +57,25 @@ object Routes {
 
     // Content URIs contain '/' which Navigation mishandles in a route arg, so the
     // video URI is passed URL-safe Base64-encoded and decoded in the player.
-    // When opened from a channel, the folderId + channel are carried along so
-    // the player's up-next is limited to that channel's episodes.
-    fun player(videoUri: String, folderId: Long? = null, channel: String? = null): String {
+    // The scope controls the player's up-next list: a channel (folderId+channel),
+    // all movies (movies=true), a single folder (folderId only), or — with none
+    // of these — the mixed whole-library feed.
+    fun player(
+        videoUri: String,
+        folderId: Long? = null,
+        channel: String? = null,
+        movies: Boolean = false,
+    ): String {
         val encoded = Base64.encodeToString(
             videoUri.toByteArray(),
             Base64.URL_SAFE or Base64.NO_WRAP or Base64.NO_PADDING,
         )
-        return if (folderId != null && channel != null) {
-            "player/$encoded?folderId=$folderId&channel=${Uri.encode(channel)}"
-        } else {
-            "player/$encoded"
+        val params = buildList {
+            if (folderId != null) add("folderId=$folderId")
+            if (channel != null) add("channel=${Uri.encode(channel)}")
+            if (movies) add("scope=movies")
         }
+        return if (params.isEmpty()) "player/$encoded" else "player/$encoded?${params.joinToString("&")}"
     }
 }
 
@@ -95,6 +102,9 @@ fun LocalTubeRoot(container: AppContainer) {
             MainScaffold(
                 container = container,
                 onOpenVideo = { nav.navigate(Routes.player(it)) },
+                onOpenScoped = { uri, folderId, movies ->
+                    nav.navigate(Routes.player(uri, folderId = folderId, movies = movies))
+                },
                 onOpenChannel = { folderId, channel -> nav.navigate(Routes.channel(folderId, channel)) },
                 onOpenParentArea = { nav.navigate(Routes.GATE) },
             )
@@ -126,6 +136,11 @@ fun LocalTubeRoot(container: AppContainer) {
                     nullable = true
                     defaultValue = null
                 },
+                navArgument("scope") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
             ),
         ) { entry ->
             val uri = runCatching {
@@ -138,15 +153,17 @@ fun LocalTubeRoot(container: AppContainer) {
             }.getOrDefault("")
             val folderId = entry.arguments?.getLong("folderId")?.takeIf { it >= 0 }
             val channel = entry.arguments?.getString("channel")?.let { Uri.decode(it) }
+            val movies = entry.arguments?.getString("scope") == "movies"
             PlayerScreen(
                 container = container,
                 videoUri = uri,
                 folderId = folderId,
                 channel = channel,
+                movies = movies,
                 onBack = { nav.popBackStack() },
                 onOpenVideo = {
-                    // Keep the same channel context when switching within the player.
-                    nav.navigate(Routes.player(it, folderId, channel)) { popUpTo(Routes.MAIN) }
+                    // Keep the same up-next scope when switching within the player.
+                    nav.navigate(Routes.player(it, folderId, channel, movies)) { popUpTo(Routes.MAIN) }
                 },
             )
         }
@@ -182,6 +199,7 @@ fun LocalTubeRoot(container: AppContainer) {
 private fun MainScaffold(
     container: AppContainer,
     onOpenVideo: (String) -> Unit,
+    onOpenScoped: (String, Long?, Boolean) -> Unit,
     onOpenChannel: (Long, String) -> Unit,
     onOpenParentArea: () -> Unit,
 ) {
@@ -212,7 +230,7 @@ private fun MainScaffold(
     ) { padding ->
         Box(modifier = Modifier.fillMaxSize().padding(padding)) {
             when (tab) {
-                0 -> HomeScreen(container, onOpenVideo, onOpenChannel, onOpenParentArea)
+                0 -> HomeScreen(container, onOpenScoped, onOpenChannel, onOpenParentArea)
                 1 -> SearchScreen(container, onOpenVideo)
                 else -> YourStuffScreen(container, onOpenVideo)
             }

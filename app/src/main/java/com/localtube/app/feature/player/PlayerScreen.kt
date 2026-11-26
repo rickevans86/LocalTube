@@ -75,12 +75,16 @@ class PlayerViewModel(
     private val repo: ContentRepository,
     folderId: Long?,
     channel: String?,
+    movies: Boolean,
 ) : ViewModel() {
-    // Opened from a channel → up-next is just that channel's episodes (in order).
-    // Opened from anywhere else → the shuffled whole-library feed.
-    private val source =
-        if (folderId != null && channel != null) repo.channelEpisodes(folderId, channel)
-        else repo.homeFeed
+    // Up-next scope: a channel's episodes, all movies, a single folder, or —
+    // when opened from "All" — the shuffled whole-library feed.
+    private val source = when {
+        folderId != null && channel != null -> repo.channelEpisodes(folderId, channel)
+        movies -> repo.movies
+        folderId != null -> repo.videosInFolder(folderId)
+        else -> repo.homeFeed
+    }
     val upNext = source.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val meta = repo.meta.map { list -> list.associateBy { it.itemKey } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
@@ -97,11 +101,14 @@ fun PlayerScreen(
     videoUri: String,
     folderId: Long?,
     channel: String?,
+    movies: Boolean,
     onBack: () -> Unit,
     onOpenVideo: (String) -> Unit,
 ) {
     val vm: PlayerViewModel = viewModel(
-        factory = viewModelFactory { initializer { PlayerViewModel(container.repository, folderId, channel) } },
+        factory = viewModelFactory {
+            initializer { PlayerViewModel(container.repository, folderId, channel, movies) }
+        },
     )
     val upNext by vm.upNext.collectAsState()
     val meta by vm.meta.collectAsState()
