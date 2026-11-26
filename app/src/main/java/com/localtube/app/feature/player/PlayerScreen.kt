@@ -104,7 +104,17 @@ fun PlayerScreen(
             addListener(object : Player.Listener {
                 override fun onPlayerError(error: PlaybackException) {
                     // Surface the reason on screen instead of failing silently.
-                    errorMessage = "Can't play this video\n${error.errorCodeName}\n${error.message ?: ""}"
+                    // Walk to the root cause so IO_UNSPECIFIED tells us *why*.
+                    val root = generateSequence(error.cause) { it.cause }.lastOrNull()
+                    errorMessage = buildString {
+                        append("Can't play this video\n")
+                        append(error.errorCodeName)
+                        if (root != null) {
+                            append("\n")
+                            append(root.javaClass.simpleName)
+                            root.message?.let { append(": "); append(it) }
+                        }
+                    }
                 }
             })
             setMediaItem(MediaItem.fromUri(Uri.parse(videoUri)))
@@ -189,7 +199,10 @@ fun PlayerScreen(
                 ) {
                     Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                        items(upNext) { v -> UpNextThumb(v, meta[v.documentUri]?.backdropUrl, onOpenVideo) }
+                        items(upNext) { v ->
+                            val m = meta[v.documentUri]
+                            UpNextThumb(v, m?.backdropUrl ?: m?.posterUrl, onOpenVideo)
+                        }
                     }
                 }
             }

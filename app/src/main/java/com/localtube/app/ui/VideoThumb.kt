@@ -12,7 +12,7 @@ import coil.ImageLoader
 import coil.compose.AsyncImage
 import coil.decode.VideoFrameDecoder
 import coil.request.ImageRequest
-import coil.request.videoFrameMillis
+import coil.request.videoFramePercent
 
 /** One shared Coil loader (decodes a frame from a local video file). */
 private object ThumbLoader {
@@ -38,7 +38,9 @@ fun VideoThumb(uri: String, modifier: Modifier = Modifier) {
         AsyncImage(
             model = ImageRequest.Builder(context)
                 .data(uri)
-                .videoFrameMillis(2000)
+                // Grab a frame ~40% through so the thumbnail isn't a black
+                // intro or a studio logo (works without knowing the duration).
+                .videoFramePercent(0.4)
                 .crossfade(true)
                 .build(),
             imageLoader = loader,
