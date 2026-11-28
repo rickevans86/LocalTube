@@ -24,6 +24,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Slider
@@ -82,6 +84,8 @@ class SettingsViewModel(
             setupComplete = false,
             upNextHeightDp = SettingsStore.UPNEXT_HEIGHT_DEFAULT,
             upNextCount = SettingsStore.UPNEXT_COUNT_DEFAULT,
+            subtitlesEnabled = false,
+            audioLanguage = "",
         ),
     )
 
@@ -115,6 +119,14 @@ class SettingsViewModel(
 
     fun setUpNext(heightDp: Int, count: Int) {
         viewModelScope.launch { settingsStore.setUpNext(heightDp, count) }
+    }
+
+    fun setSubtitles(enabled: Boolean) {
+        viewModelScope.launch { settingsStore.setSubtitlesEnabled(enabled) }
+    }
+
+    fun setAudioLanguage(code: String) {
+        viewModelScope.launch { settingsStore.setAudioLanguage(code) }
     }
 
     suspend fun checkForUpdates(): UpdateResult = updateChecker.check()
@@ -173,6 +185,12 @@ fun SettingsScreen(
             heightDp = settings.upNextHeightDp,
             count = settings.upNextCount,
             onChange = vm::setUpNext,
+        )
+        PlaybackControl(
+            subtitlesEnabled = settings.subtitlesEnabled,
+            audioLanguage = settings.audioLanguage,
+            onSubtitles = vm::setSubtitles,
+            onAudioLanguage = vm::setAudioLanguage,
         )
         SettingsRow("Check for updates", updateStatusText(update)) {
             val prev = update
@@ -235,6 +253,79 @@ private suspend fun startInstall(context: Context, tag: String, url: String): Up
 }
 
 @Composable
+private val AUDIO_LANGUAGES = listOf(
+    "" to "Default",
+    "en" to "English",
+    "es" to "Spanish",
+    "fr" to "French",
+    "de" to "German",
+    "it" to "Italian",
+    "ja" to "Japanese",
+    "zh" to "Chinese",
+    "hi" to "Hindi",
+    "ar" to "Arabic",
+)
+
+/** Toggles subtitles and forces a preferred audio language in the player. */
+@Composable
+private fun PlaybackControl(
+    subtitlesEnabled: Boolean,
+    audioLanguage: String,
+    onSubtitles: (Boolean) -> Unit,
+    onAudioLanguage: (String) -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(18.dp),
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text("Subtitles", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    if (subtitlesEnabled) "Shown when available" else "Off",
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                )
+            }
+            Switch(checked = subtitlesEnabled, onCheckedChange = onSubtitles)
+        }
+
+        var expanded by remember { mutableStateOf(false) }
+        val label = AUDIO_LANGUAGES.firstOrNull { it.first == audioLanguage }?.second ?: "Default"
+        Box(modifier = Modifier.padding(top = 14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth().clickable { expanded = true },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Audio language", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        if (audioLanguage.isEmpty()) "Use the video's default" else "Prefer $label",
+                        fontSize = 13.sp,
+                        color = Color.Gray,
+                    )
+                }
+                Text(label, color = Coral, fontWeight = FontWeight.Bold)
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                AUDIO_LANGUAGES.forEach { (code, name) ->
+                    DropdownMenuItem(
+                        text = { Text(name) },
+                        onClick = {
+                            onAudioLanguage(code)
+                            expanded = false
+                        },
+                    )
+                }
+            }
+        }
+    }
+}
+
 /** Controls the size and number of the "Up next" thumbnails in the player. */
 @Composable
 private fun UpNextControl(heightDp: Int, count: Int, onChange: (Int, Int) -> Unit) {

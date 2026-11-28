@@ -55,6 +55,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -116,6 +117,8 @@ fun PlayerScreen(
     val appSettings by container.settings.settings.collectAsState(initial = null)
     val upNextHeight = appSettings?.upNextHeightDp ?: SettingsStore.UPNEXT_HEIGHT_DEFAULT
     val upNextCount = appSettings?.upNextCount ?: SettingsStore.UPNEXT_COUNT_DEFAULT
+    val subtitlesEnabled = appSettings?.subtitlesEnabled ?: false
+    val audioLanguage = appSettings?.audioLanguage ?: ""
     val context = LocalContext.current
     val startedAt = remember { System.currentTimeMillis() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -145,6 +148,15 @@ fun PlayerScreen(
             prepare()
             playWhenReady = true
         }
+    }
+
+    // Apply the subtitle and audio-language preferences (and keep them in sync
+    // if the parent changes them).
+    LaunchedEffect(subtitlesEnabled, audioLanguage) {
+        player.trackSelectionParameters = player.trackSelectionParameters.buildUpon()
+            .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, !subtitlesEnabled)
+            .setPreferredAudioLanguage(audioLanguage.ifEmpty { null })
+            .build()
     }
 
     // Queue what comes next so a finished video auto-advances. In a channel the

@@ -24,6 +24,8 @@ data class AppSettings(
     val setupComplete: Boolean,
     val upNextHeightDp: Int,
     val upNextCount: Int,
+    val subtitlesEnabled: Boolean,
+    val audioLanguage: String,
 )
 
 /**
@@ -44,6 +46,8 @@ class SettingsStore(private val context: Context) {
         val SETUP_DONE = booleanPreferencesKey("setup_complete")
         val UPNEXT_HEIGHT = intPreferencesKey("upnext_height_dp")
         val UPNEXT_COUNT = intPreferencesKey("upnext_count")
+        val SUBTITLES_ON = booleanPreferencesKey("subtitles_enabled")
+        val AUDIO_LANG = stringPreferencesKey("audio_language")
     }
 
     companion object {
@@ -65,6 +69,8 @@ class SettingsStore(private val context: Context) {
             setupComplete = p[Keys.SETUP_DONE] ?: false,
             upNextHeightDp = p[Keys.UPNEXT_HEIGHT] ?: UPNEXT_HEIGHT_DEFAULT,
             upNextCount = p[Keys.UPNEXT_COUNT] ?: UPNEXT_COUNT_DEFAULT,
+            subtitlesEnabled = p[Keys.SUBTITLES_ON] ?: false,
+            audioLanguage = p[Keys.AUDIO_LANG] ?: "",
         )
     }
 
@@ -106,6 +112,12 @@ class SettingsStore(private val context: Context) {
             it[Keys.UPNEXT_HEIGHT] = heightDp.coerceIn(UPNEXT_HEIGHT_MIN, UPNEXT_HEIGHT_MAX)
             it[Keys.UPNEXT_COUNT] = count.coerceIn(UPNEXT_COUNT_MIN, UPNEXT_COUNT_MAX)
         }
+
+    suspend fun setSubtitlesEnabled(enabled: Boolean) =
+        context.dataStore.edit { it[Keys.SUBTITLES_ON] = enabled }
+
+    suspend fun setAudioLanguage(code: String) =
+        context.dataStore.edit { it[Keys.AUDIO_LANG] = code }
 
     private fun hash(pin: String, salt: ByteArray): ByteArray {
         val md = MessageDigest.getInstance("SHA-256")
