@@ -62,6 +62,7 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.ui.PlayerView
 import com.localtube.app.data.ContentRepository
+import com.localtube.app.data.SettingsStore
 import com.localtube.app.data.db.VideoEntity
 import com.localtube.app.di.AppContainer
 import coil.compose.AsyncImage
@@ -112,6 +113,9 @@ fun PlayerScreen(
     )
     val upNext by vm.upNext.collectAsState()
     val meta by vm.meta.collectAsState()
+    val appSettings by container.settings.settings.collectAsState(initial = null)
+    val upNextHeight = appSettings?.upNextHeightDp ?: SettingsStore.UPNEXT_HEIGHT_DEFAULT
+    val upNextCount = appSettings?.upNextCount ?: SettingsStore.UPNEXT_COUNT_DEFAULT
     val context = LocalContext.current
     val startedAt = remember { System.currentTimeMillis() }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -220,9 +224,9 @@ fun PlayerScreen(
                 ) {
                     Text("Up next", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     LazyRow(modifier = Modifier.padding(top = 6.dp)) {
-                        items(upNext) { v ->
+                        items(upNext.take(upNextCount)) { v ->
                             val m = meta[v.documentUri]
-                            UpNextThumb(v, m?.backdropUrl ?: m?.posterUrl, onOpenVideo)
+                            UpNextThumb(v, m?.backdropUrl ?: m?.posterUrl, upNextHeight, onOpenVideo)
                         }
                     }
                 }
@@ -249,12 +253,11 @@ fun PlayerScreen(
 }
 
 @Composable
-private fun UpNextThumb(video: VideoEntity, artUrl: String?, onOpen: (String) -> Unit) {
+private fun UpNextThumb(video: VideoEntity, artUrl: String?, heightDp: Int, onOpen: (String) -> Unit) {
     Box(
         modifier = Modifier
             .padding(end = 10.dp)
-            .width(118.dp)
-            .size(width = 118.dp, height = 66.dp)
+            .size(width = (heightDp * 16 / 9).dp, height = heightDp.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(Color.DarkGray)
             .clickable { onOpen(video.documentUri) },

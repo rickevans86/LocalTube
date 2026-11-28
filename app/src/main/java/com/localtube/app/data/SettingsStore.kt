@@ -22,6 +22,8 @@ data class AppSettings(
     val bedtimeStartMinutes: Int,
     val bedtimeEndMinutes: Int,
     val setupComplete: Boolean,
+    val upNextHeightDp: Int,
+    val upNextCount: Int,
 )
 
 /**
@@ -40,6 +42,17 @@ class SettingsStore(private val context: Context) {
         val BEDTIME_START = intPreferencesKey("bedtime_start_minutes")
         val BEDTIME_END = intPreferencesKey("bedtime_end_minutes")
         val SETUP_DONE = booleanPreferencesKey("setup_complete")
+        val UPNEXT_HEIGHT = intPreferencesKey("upnext_height_dp")
+        val UPNEXT_COUNT = intPreferencesKey("upnext_count")
+    }
+
+    companion object {
+        const val UPNEXT_HEIGHT_MIN = 66
+        const val UPNEXT_HEIGHT_MAX = 180
+        const val UPNEXT_HEIGHT_DEFAULT = 96
+        const val UPNEXT_COUNT_MIN = 4
+        const val UPNEXT_COUNT_MAX = 30
+        const val UPNEXT_COUNT_DEFAULT = 12
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -50,6 +63,8 @@ class SettingsStore(private val context: Context) {
             bedtimeStartMinutes = p[Keys.BEDTIME_START] ?: (19 * 60 + 30),
             bedtimeEndMinutes = p[Keys.BEDTIME_END] ?: (7 * 60),
             setupComplete = p[Keys.SETUP_DONE] ?: false,
+            upNextHeightDp = p[Keys.UPNEXT_HEIGHT] ?: UPNEXT_HEIGHT_DEFAULT,
+            upNextCount = p[Keys.UPNEXT_COUNT] ?: UPNEXT_COUNT_DEFAULT,
         )
     }
 
@@ -85,6 +100,12 @@ class SettingsStore(private val context: Context) {
 
     suspend fun setSetupComplete() =
         context.dataStore.edit { it[Keys.SETUP_DONE] = true }
+
+    suspend fun setUpNext(heightDp: Int, count: Int) =
+        context.dataStore.edit {
+            it[Keys.UPNEXT_HEIGHT] = heightDp.coerceIn(UPNEXT_HEIGHT_MIN, UPNEXT_HEIGHT_MAX)
+            it[Keys.UPNEXT_COUNT] = count.coerceIn(UPNEXT_COUNT_MIN, UPNEXT_COUNT_MAX)
+        }
 
     private fun hash(pin: String, salt: ByteArray): ByteArray {
         val md = MessageDigest.getInstance("SHA-256")

@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -72,7 +73,16 @@ class SettingsViewModel(
     val settings = settingsStore.settings.stateIn(
         viewModelScope,
         SharingStarted.WhileSubscribed(5_000),
-        com.localtube.app.data.AppSettings(false, 120, false, 19 * 60 + 30, 7 * 60, false),
+        com.localtube.app.data.AppSettings(
+            hasPin = false,
+            dailyLimitMinutes = 120,
+            bedtimeEnabled = false,
+            bedtimeStartMinutes = 19 * 60 + 30,
+            bedtimeEndMinutes = 7 * 60,
+            setupComplete = false,
+            upNextHeightDp = SettingsStore.UPNEXT_HEIGHT_DEFAULT,
+            upNextCount = SettingsStore.UPNEXT_COUNT_DEFAULT,
+        ),
     )
 
     fun addFolder(name: String, treeUri: String) {
@@ -101,6 +111,10 @@ class SettingsViewModel(
 
     fun setBedtime(enabled: Boolean, start: Int, end: Int) {
         viewModelScope.launch { settingsStore.setBedtime(enabled, start, end) }
+    }
+
+    fun setUpNext(heightDp: Int, count: Int) {
+        viewModelScope.launch { settingsStore.setUpNext(heightDp, count) }
     }
 
     suspend fun checkForUpdates(): UpdateResult = updateChecker.check()
@@ -155,6 +169,11 @@ fun SettingsScreen(
         }
         SettingsRow("Scan movies & TV shows", "Match posters · fix mismatches", onOpenScanMatch)
         SettingsRow("Screen time", "${settings.dailyLimitMinutes} min/day", onOpenScreenTime)
+        UpNextControl(
+            heightDp = settings.upNextHeightDp,
+            count = settings.upNextCount,
+            onChange = vm::setUpNext,
+        )
         SettingsRow("Check for updates", updateStatusText(update)) {
             val prev = update
             scope.launch {
@@ -213,6 +232,36 @@ private suspend fun startInstall(context: Context, tag: String, url: String): Up
     val file = UpdateDownloader.download(context, url, tag) ?: return UpdateUi.Failed("Download failed")
     ApkInstaller.install(context, file)
     return UpdateUi.Installing
+}
+
+@Composable
+/** Controls the size and number of the "Up next" thumbnails in the player. */
+@Composable
+private fun UpNextControl(heightDp: Int, count: Int, onChange: (Int, Int) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 6.dp)
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color.White)
+            .padding(18.dp),
+    ) {
+        Text("Up next row", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+
+        Text("Thumbnail size", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(top = 10.dp))
+        Slider(
+            value = heightDp.toFloat(),
+            onValueChange = { onChange(it.toInt(), count) },
+            valueRange = SettingsStore.UPNEXT_HEIGHT_MIN.toFloat()..SettingsStore.UPNEXT_HEIGHT_MAX.toFloat(),
+        )
+
+        Text("Number shown: $count", fontSize = 13.sp, color = Color.Gray, modifier = Modifier.padding(top = 4.dp))
+        Slider(
+            value = count.toFloat(),
+            onValueChange = { onChange(heightDp, it.toInt()) },
+            valueRange = SettingsStore.UPNEXT_COUNT_MIN.toFloat()..SettingsStore.UPNEXT_COUNT_MAX.toFloat(),
+        )
+    }
 }
 
 @Composable
